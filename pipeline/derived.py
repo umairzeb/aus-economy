@@ -6,7 +6,7 @@ returns a dict with at least id/title/unit/section/freq/points/source.
 from __future__ import annotations
 
 from . import transforms as t
-from .registry import CPI_COMPONENTS
+from .registry import ABS_FLOWS, CPI_COMPONENTS
 from .sources import abs as abs_
 from .sources import budget, jsa
 
@@ -17,7 +17,7 @@ JSA = "Jobs and Skills Australia"
 
 
 def abs_src(flow: str, key: str) -> dict:
-    return {"name": ABS, "dataset": flow, "url": f"{abs_.BASE}/ABS,{flow}/{key}"}
+    return {"name": ABS, "dataset": ABS_FLOWS.get(flow, flow), "url": f"{abs_.BASE}/ABS,{flow}/{key}"}
 
 
 def cpi_monthly() -> list[dict]:
@@ -77,38 +77,38 @@ def from_others(got) -> list[dict]:
     return [
         dict(id="real_wage_growth", title="Real wage growth", unit="pp", section="jobs", freq="Q",
              points=t.subtract(q("wpi_yoy"), q("cpi_yoy_q"), 1),
-             source={"name": ABS, "dataset": "WPI, CPI", "url": abs_.BASE},
+             source={"name": ABS, "dataset": ABS_FLOWS["WPI"] + "; " + ABS_FLOWS["CPI"], "url": abs_.BASE},
              notes="Wage growth minus inflation. Negative means pay is buying less than a year ago."),
         dict(id="employment_change", title="Jobs added (monthly)", unit="'000", section="jobs", freq="M",
              points=t.diff(q("employed_persons"), 1, 1),
-             source={"name": ABS, "dataset": "LF", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["LF"], "url": abs_.BASE}),
         dict(id="gdp_growth_yoy", title="Economic growth (real GDP, annual)", unit="% y/y", section="growth",
              freq="Q", points=t.pct_change(q("gdp_real"), 4, 1),
-             source={"name": ABS, "dataset": "ANA_AGG", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["ANA_AGG"], "url": abs_.BASE}),
         dict(id="gdp_per_capita_growth_yoy", title="Growth per person (real GDP per capita, annual)",
              unit="% y/y", section="growth", freq="Q", points=t.pct_change(q("gdp_per_capita_real"), 4, 1),
-             source={"name": ABS, "dataset": "ANA_AGG", "url": abs_.BASE},
+             source={"name": ABS, "dataset": ABS_FLOWS["ANA_AGG"], "url": abs_.BASE},
              notes="If this is negative while GDP grows, the economy is only growing because there are more people."),
         dict(id="trade_balance_12m", title="Goods trade surplus (12 months)", unit="$bn", section="trade", freq="M",
              points=t.scale(t.rolling_sum(q("trade_balance_goods"), 12), 1 / 1000, 1),
-             source={"name": ABS, "dataset": "ITGS", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["ITGS"], "url": abs_.BASE}),
         dict(id="exports_education_4q", title="Education exports (12 months)", unit="$bn", section="trade",
              freq="Q", points=t.scale(t.rolling_sum(q("exports_education_q"), 4), 1 / 1000, 1),
-             source={"name": ABS, "dataset": "BOP", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["BOP"], "url": abs_.BASE}),
         dict(id="dwelling_approvals_12m", title="Dwellings approved (12 months)", unit="dwellings",
              section="housing", freq="M", points=t.rolling_sum(q("dwelling_approvals_m"), 12),
-             source={"name": ABS, "dataset": "BA_GCCSA", "url": abs_.BASE},
+             source={"name": ABS, "dataset": ABS_FLOWS["BA_GCCSA"], "url": abs_.BASE},
              notes="Rolling 12-month total. The National Housing Accord target is 1.2 million homes over "
                    "5 years from mid-2024 (~240,000 a year)."),
         dict(id="population_growth_yoy", title="Population growth (annual)", unit="% y/y", section="population",
              freq="Q", points=t.pct_change(q("population"), 4, 2),
-             source={"name": ABS, "dataset": "ERP_COMP_Q", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["ERP_COMP_Q"], "url": abs_.BASE}),
         dict(id="nom_annual", title="Net overseas migration (12 months)", unit="people", section="population",
              freq="Q", points=t.rolling_sum(q("nom_q"), 4),
-             source={"name": ABS, "dataset": "ERP_COMP_Q", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["ERP_COMP_Q"], "url": abs_.BASE}),
         dict(id="natural_increase_annual", title="Births minus deaths (12 months)", unit="people",
              section="population", freq="Q", points=t.rolling_sum(q("natural_increase_q"), 4),
-             source={"name": ABS, "dataset": "ERP_COMP_Q", "url": abs_.BASE}),
+             source={"name": ABS, "dataset": ABS_FLOWS["ERP_COMP_Q"], "url": abs_.BASE}),
     ]
 
 

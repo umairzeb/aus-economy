@@ -10,7 +10,7 @@ import pandas as pd
 import requests
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = ROOT / "public" / "data"
 CACHE_DIR = ROOT / ".cache"
 
 USER_AGENT = "Mozilla/5.0 (compatible; aus-economy-dashboard/0.1)"
