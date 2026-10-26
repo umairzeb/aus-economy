@@ -158,8 +158,24 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline
 .chip.critical .dot { background: var(--status-critical); }
 .chip.neutral .dot { background: var(--axis-muted); }
 
+/* Range switch: one control above every chart, kept in reach while scrolling */
+.range-bar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 32px -16px 0; padding: 10px 16px; background: var(--page);
+  border-bottom: 1px solid var(--grid);
+}
+.range-label { font-size: 13px; color: var(--text-secondary); }
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-1); }
+.segmented button {
+  border: 0; background: none; font: inherit; font-size: 13px; color: var(--text-secondary);
+  padding: 6px 12px; cursor: pointer; min-height: 32px;
+}
+.segmented button + button { border-left: 1px solid var(--border); }
+.segmented button:hover { color: var(--text-primary); background: var(--surface-2); }
+.segmented button[aria-pressed="true"] { background: var(--text-primary); color: var(--page); font-weight: 600; }
+
 /* Sections */
-.section { margin-top: 48px; scroll-margin-top: 16px; }
+.section { margin-top: 40px; scroll-margin-top: 64px; }
 .section > header { margin-bottom: 16px; }
 .section h2 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
 .section .lede { color: var(--text-secondary); margin: 6px 0 0; max-width: 75ch; }

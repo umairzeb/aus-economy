@@ -3,10 +3,11 @@ import { loadData, type Data } from "./data";
 import { buildSummary, buildTiles } from "./insights";
 import { BudgetSection, EarnSection, GoingSection, YouSection } from "./sections";
 import { StatTile } from "./components/ui";
+import { RangeBar, RangeContext, useRangeState } from "./range";
 import { TokensContext, useThemeState, type ThemePref } from "./theme";
 
 const SERIES = [
-  "cpi_yoy", "trimmed_mean_yoy", "cpi_yoy_q", "unemployment_rate", "underemployment_rate", "wpi_yoy",
+  "cpi_yoy", "trimmed_mean_yoy", "cpi_yoy_q", "trimmed_mean_yoy_q", "mortgage_rate_variable", "unemployment_rate", "underemployment_rate", "wpi_yoy",
   "real_wage_growth", "gdp_growth_yoy", "gdp_per_capita_growth_yoy", "cash_rate", "mortgage_rate_discounted",
   "population_growth_yoy", "nom_annual", "natural_increase_annual", "aud_usd", "trade_balance_12m",
   "exports_education_4q", "terms_of_trade", "budget_balance_pct_gdp", "net_debt_pct_gdp",
@@ -21,6 +22,7 @@ const THEME_LABEL: Record<ThemePref, string> = { auto: "Theme: auto", light: "Th
 
 export default function App() {
   const { pref, setPref, tokens } = useThemeState();
+  const { range, setRange, start } = useRangeState();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,10 +72,13 @@ export default function App() {
               {buildTiles(data).map((tile) => <StatTile key={tile.label} {...tile} />)}
             </div>
 
-            <GoingSection data={data} />
-            <EarnSection data={data} />
-            <BudgetSection data={data} />
-            <YouSection data={data} />
+            <RangeContext.Provider value={{ range, start }}>
+              <RangeBar range={range} onChange={setRange} />
+              <GoingSection data={data} />
+              <EarnSection data={data} />
+              <BudgetSection data={data} />
+              <YouSection data={data} />
+            </RangeContext.Provider>
           </main>
         )}
 

@@ -47,6 +47,7 @@ export interface LineOpts {
   band?: [number, number];
   bandLabel?: string;
   breaks?: { date: string; label: string }[];
+  events?: { date: string; label: string; short: string }[];
   zeroLine?: boolean;
   endLabels?: boolean;
 }
@@ -88,7 +89,7 @@ export function lineOption(o: LineOpts): EChartsOption {
             data: [[{ yAxis: o.band[0] }, { yAxis: o.band[1] }]],
           }
         : undefined,
-      markLine: i === 0 && (o.breaks?.length || o.zeroLine)
+      markLine: i === 0 && (o.breaks?.length || o.events?.length || o.zeroLine)
         ? {
             silent: true,
             symbol: "none",
@@ -96,6 +97,11 @@ export function lineOption(o: LineOpts): EChartsOption {
             label: { color: t.textMuted, fontSize: 11, fontFamily: FONT },
             data: [
               ...(o.zeroLine ? [{ yAxis: 0, label: { show: false } }] : []),
+              ...(o.events ?? []).map((e) => ({
+                xAxis: e.date,
+                lineStyle: { color: t.axis, width: 1, type: "solid" as const },
+                label: { show: true, formatter: narrow ? e.short : e.label, position: "insideEndTop" as const, color: t.textMuted },
+              })),
               ...(o.breaks ?? []).map((b) => ({
                 xAxis: b.date,
                 label: { show: true, formatter: narrow ? "New CPI" : b.label, position: "insideEndTop" as const },

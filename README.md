@@ -20,6 +20,8 @@ npm run build    # static site in dist/
 - `src/sections.tsx`: the four question sections
 - `src/insights.ts`: rules that turn numbers into plain-English readings (descriptive only, never advice)
 - `src/charts.ts`, `src/cards.tsx`: chart builders and chart cards (each card has a table view)
+- `src/range.tsx`: the page-wide 5y / 10y / 30y / All switch
+- `src/events.ts`: major events marked on time charts
 - `src/styles.css`: colour tokens for light and dark mode
 
 ## Data pipeline
