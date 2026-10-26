@@ -1,0 +1,36 @@
+"""Jobs and Skills Australia - Internet Vacancy Index (online job ads).
+
+The workbook URL changes every month, so it is discovered from the IVI page.
+"""
+from __future__ import annotations
+
+import io
+import re
+from functools import lru_cache
+from urllib.parse import urljoin
+
+import pandas as pd
+
+from ..util import get
+
+PAGE_URL = "https://www.jobsandskills.gov.au/data/internet-vacancy-index"
+FILE_PATTERN = r'href="([^"]*anzsco2_occupations_states_and_territories[^"]*\.xlsx)"'
+
+
+@lru_cache(maxsize=None)
+def ivi() -> dict:
+    """Trend job ads for Australia by ANZSCO level. Returns {url, frame} where
+    frame has columns level, code, title and one column per month (ISO end date)."""
+    page = get(PAGE_URL).text
+    m = re.search(FILE_PATTERN, page)
+    if not m:
+        raise RuntimeError("IVI workbook link not found on JSA page")
+    url = urljoin(PAGE_URL, m[1])
+    df = pd.read_excel(io.BytesIO(get(url).content), sheet_name="Trend")
+    df = df[df["State"].astype(str).str.upper() == "AUST"].copy()
+    months = [c for c in df.columns if isinstance(c, pd.Timestamp) or hasattr(c, "year")]
+    rename = {c: (pd.Timestamp(c) + pd.offsets.MonthEnd(0)).date().isoformat() for c in months}
+    df = df.rename(columns=rename | {"Level": "level", "ANZSCO_CODE": "code", "Title": "title"})
+    df["code"] = df["code"].astype(str)
+    df["title"] = df["title"].astype(str).str.strip()
+    return {"url": url, "frame": df[["level", "code", "title", *rename.values()]]}
