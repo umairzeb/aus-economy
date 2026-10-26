@@ -27,7 +27,7 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - Each CSV has ~10 metadata rows ending in `Series ID`, then one row per date.
 - Tables carry empty placeholder rows past the latest date (e.g. E2 and H1 run to 2027), and some columns are discontinued (OIS ended Nov 2022). Always take the last non-empty value per series.
 - Send a browser-like User-Agent.
-- `bond_10y` (F2.1) starts in 2013. Longer history is in RBA's historical workbooks if needed later.
+- `bond_10y`, `aud_usd` and `aud_twi` splice frozen RBA history workbooks (`xls-hist/f02histhist.xls`, `xls-hist/f11hist-1969-2009.xls`, read with the calamine engine) in front of the current CSVs, giving monthly data from 1969-70. The joins line up without jumps.
 
 ## Budget
 

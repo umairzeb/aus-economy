@@ -5,6 +5,7 @@ import { BarCard, ColumnCard, LineCard } from "./cards";
 import type { BarItem } from "./charts";
 import { withToday } from "./insights";
 import { billions, fmt, pct, periodLabel, signed } from "./format";
+import { useRange } from "./range";
 import { useTokens } from "./theme";
 
 function Section({ id, title, lede, children }: { id: string; title: string; lede: string; children: ReactNode }) {
@@ -49,22 +50,27 @@ const changeText = (c: number | null | undefined, what = "on the previous 12 mon
 
 export function GoingSection({ data }: { data: Data }) {
   const t = useTokens();
+  const { range } = useRange();
   const S = data.series;
   return (
     <Section id="going" title="How are things going?"
       lede="The four numbers that shape everyday life: prices, jobs, pay and growth.">
       <div className="grid-2">
-        {S.cpi_yoy && S.trimmed_mean_yoy && (
-          <LineCard title="Inflation" subtitle="Annual change in consumer prices, monthly"
-            takeaway={`Headline ${pct(last(S.cpi_yoy)[1])}, underlying ${pct(last(S.trimmed_mean_yoy)[1])}. The RBA aims for 2–3%.`}
-            lines={[{ s: S.cpi_yoy, name: "All prices (CPI)", color: t.s1 }, { s: S.trimmed_mean_yoy, name: "Underlying (trimmed mean)", color: t.s2 }]}
-            start="2018-01-01" yFormat={(v) => pct(v)} band={S.cpi_yoy.target_band} bandLabel="RBA target 2–3%" breaks />
+        {S.cpi_yoy && S.trimmed_mean_yoy && S.cpi_yoy_q && S.trimmed_mean_yoy_q && (
+          // Monthly CPI only goes back to 2018, so longer ranges use the quarterly series (from 1949).
+          <LineCard title="Inflation"
+            subtitle={range === "5y" ? "Annual change in consumer prices, monthly" : "Annual change in consumer prices, quarterly"}
+            takeaway={`Headline ${pct(last(S.cpi_yoy)[1])}, underlying ${pct(last(S.trimmed_mean_yoy)[1])} (${periodLabel(last(S.cpi_yoy)[0])}). The RBA aims for 2–3%.`}
+            lines={range === "5y"
+              ? [{ s: S.cpi_yoy, name: "All prices (CPI)", color: t.s1 }, { s: S.trimmed_mean_yoy, name: "Underlying (trimmed mean)", color: t.s2 }]
+              : [{ s: S.cpi_yoy_q, name: "All prices (CPI)", color: t.s1 }, { s: S.trimmed_mean_yoy_q, name: "Underlying (trimmed mean)", color: t.s2 }]}
+            yFormat={(v) => pct(v)} band={S.cpi_yoy.target_band} bandLabel="RBA target 2–3%" breaks={range === "5y"} />
         )}
         {S.unemployment_rate && S.underemployment_rate && (
           <LineCard title="Jobs" subtitle="Share of the labour force, seasonally adjusted"
             takeaway={`${pct(last(S.unemployment_rate)[1])} can't find work, and ${pct(last(S.underemployment_rate)[1])} have work but want more hours.`}
             lines={[{ s: S.unemployment_rate, name: "Unemployed", color: t.s1 }, { s: S.underemployment_rate, name: "Underemployed", color: t.s2 }]}
-            start="2015-01-01" yFormat={(v) => pct(v)} />
+            yFormat={(v) => pct(v)} />
         )}
         {S.wpi_yoy && S.cpi_yoy_q && (
           <LineCard title="Wages vs prices" subtitle="Annual change, quarterly"
@@ -72,13 +78,13 @@ export function GoingSection({ data }: { data: Data }) {
               ? "Prices are rising faster than wages, so pay is losing buying power."
               : "Wages are rising faster than prices, so pay is gaining buying power."}
             lines={[{ s: S.wpi_yoy, name: "Wages", color: t.s1 }, { s: S.cpi_yoy_q, name: "Prices", color: t.s2 }]}
-            start="2012-01-01" yFormat={(v) => pct(v)} />
+            yFormat={(v) => pct(v)} />
         )}
         {S.gdp_growth_yoy && S.gdp_per_capita_growth_yoy && (
           <LineCard title="Economic growth" subtitle="Annual change in real GDP, quarterly"
             takeaway="When growth per person lags total growth, the economy is getting bigger mainly because there are more people."
             lines={[{ s: S.gdp_growth_yoy, name: "Whole economy", color: t.s1 }, { s: S.gdp_per_capita_growth_yoy, name: "Per person", color: t.s2 }]}
-            start="2012-01-01" yFormat={(v) => pct(v)} zeroLine />
+            yFormat={(v) => pct(v)} zeroLine />
         )}
       </div>
     </Section>
@@ -143,7 +149,7 @@ export function EarnSection({ data }: { data: Data }) {
         {S.terms_of_trade && (
           <LineCard title="Terms of trade" subtitle="Export prices relative to import prices (index)"
             takeaway="When this is high, the world pays more for what Australia sells, which boosts incomes and tax revenue."
-            lines={[{ s: S.terms_of_trade, name: "Terms of trade", color: t.s1 }]} start="2000-01-01" yFormat={(v) => fmt(v, 0)} />
+            lines={[{ s: S.terms_of_trade, name: "Terms of trade", color: t.s1 }]} yFormat={(v) => fmt(v, 0)} />
         )}
       </div>
     </Section>
@@ -180,12 +186,12 @@ export function BudgetSection({ data }: { data: Data }) {
         {bal && (
           <ColumnCard title="Surplus or deficit" subtitle="Underlying cash balance, % of GDP, by financial year"
             takeaway={`Last actual: ${signed(actuals(bal).at(-1)![1], 1, "%")} of GDP. Treasury expects deficits every year to ${periodLabel(last(bal)[0], "FY")}.`}
-            s={bal} start="1990-01-01" name="Balance" yFormat={(v) => `${fmt(v, 0)}%`} />
+            s={bal} name="Balance" yFormat={(v) => `${fmt(v, 0)}%`} />
         )}
         {debt && (
           <LineCard title="Government debt" subtitle="Net debt, % of GDP, by financial year"
             takeaway={`Net debt is ${pct(actuals(debt).at(-1)![1])} of GDP and forecast to reach ${pct(last(debt)[1])} by ${periodLabel(last(debt)[0], "FY")}.`}
-            lines={[{ s: debt, name: "Net debt", color: t.s1 }]} start="1990-01-01" yFormat={(v) => `${fmt(v, 0)}%`} zeroLine />
+            lines={[{ s: debt, name: "Net debt", color: t.s1 }]} yFormat={(v) => `${fmt(v, 0)}%`} zeroLine />
         )}
       </div>
     </Section>
@@ -224,14 +230,15 @@ export function YouSection({ data }: { data: Data }) {
             sources={[cpiB.source]} asOf={periodLabel(cpiB.as_of)}
             table={{ head: ["Category", "Annual change"], rows: cpiB.items.map((i) => [i.label, signed(i.value, 1, "%")]), num: [1] }} />
         )}
-        {S.mortgage_rate_discounted && S.cash_rate && (
+        {S.mortgage_rate_variable && S.mortgage_rate_discounted && S.cash_rate && (
           <LineCard title="Borrowing costs" subtitle="Per cent per year"
-            takeaway={`A typical new variable mortgage costs ${pct(last(S.mortgage_rate_discounted)[1], 2)}. Banks move these rates when the RBA moves the cash rate.`}
+            takeaway={`A typical new variable mortgage costs ${pct(last(S.mortgage_rate_discounted)[1], 2)}; the banks' advertised standard rate is ${pct(last(S.mortgage_rate_variable)[1], 2)}. Both move with the RBA cash rate.`}
             lines={[
-              { s: S.mortgage_rate_discounted, name: "Variable mortgage (discounted)", color: t.s1 },
+              { s: S.mortgage_rate_variable, name: "Standard variable mortgage", color: t.s1 },
               { s: S.cash_rate, name: "RBA cash rate", color: t.s2, step: true, points: withToday(S.cash_rate).points },
+              { s: S.mortgage_rate_discounted, name: "Discounted variable", color: t.s3 },
             ]}
-            start="2015-01-01" yFormat={(v) => pct(v, v % 1 === 0 ? 0 : 1)} />
+            yFormat={(v) => pct(v, v % 1 === 0 ? 0 : 1)} />
         )}
         {houses && (
           <BarCard title="Home prices by state" subtitle="Mean dwelling price, $'000"

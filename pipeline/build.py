@@ -14,7 +14,7 @@ from . import bundles, derived
 from .registry import ABS_FLOWS, RBA_TABLES, SERIES
 from .sources import abs as abs_
 from .sources import rba
-from .transforms import value_at_or_before
+from .transforms import splice, value_at_or_before
 from .util import DATA_DIR, now_iso, write_json
 
 # Plausible range for each headline's latest value. Catches unit/multiplier
@@ -45,9 +45,11 @@ def fetch_direct(spec: dict) -> dict:
         pts = abs_.series(flow, key, to_mult=spec.get("to_mult"))
     else:
         pts = rba.series(*spec["rba"])
+        if spec.get("rba_hist"):
+            pts = splice(rba.hist_table(spec["rba_hist"])[spec["rba"][1]], pts)
     if spec.get("negate"):  # ABS records imports as debits (negative)
         pts = [[d, -v] for d, v in pts]
-    out = {k: v for k, v in spec.items() if k not in ("abs", "rba", "to_mult", "negate")}
+    out = {k: v for k, v in spec.items() if k not in ("abs", "rba", "rba_hist", "to_mult", "negate")}
     return out | {"points": pts, "source": source_for(spec)}
 
 

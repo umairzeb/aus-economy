@@ -11,6 +11,8 @@ import csv
 import io
 from functools import lru_cache
 
+import pandas as pd
+
 from ..util import get, period_end, to_number
 
 CSV_URL = "https://www.rba.gov.au/statistics/tables/csv/{table}-data.csv"
@@ -39,6 +41,33 @@ def table(name: str) -> dict:
             "frequency": (meta.get("Frequency") or [""] * (j + 1))[j].strip(),
             "points": pts,
         }
+    return out
+
+
+HIST_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{name}.xls"
+
+
+@lru_cache(maxsize=None)
+def hist_table(name: str) -> dict[str, list[list]]:
+    """Frozen historical workbook (old .xls), e.g. 'f11hist-1969-2009'.
+
+    The header row is labelled 'Series ID' or 'Mnemonic'; dates follow in column 0.
+    Returns {series_id: points}.
+    """
+    df = pd.read_excel(io.BytesIO(get(HIST_URL.format(name=name)).content), sheet_name="Data",
+                       header=None, engine="calamine")
+    first = df[0].astype(str).str.strip()
+    header = first[first.isin(["Series ID", "Mnemonic"])].index[0]
+    ids = df.iloc[header].tolist()
+    out: dict[str, list[list]] = {}
+    for _, row in df.iloc[header + 1:].iterrows():
+        d = pd.to_datetime(row[0], errors="coerce")
+        if pd.isna(d):
+            continue
+        for j, sid in enumerate(ids[1:], 1):
+            v = to_number(row[j])
+            if isinstance(sid, str) and v is not None:
+                out.setdefault(sid.strip(), []).append([d.date().isoformat(), v])
     return out
 
 

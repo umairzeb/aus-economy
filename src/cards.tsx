@@ -5,6 +5,8 @@ import { barListHeight, barOption, columnOption, lineOption, type BarItem, type 
 import { EChart } from "./components/EChart";
 import { ChartCard, type LegendEntry } from "./components/ui";
 import { periodLabel } from "./format";
+import { eventsBetween } from "./events";
+import { useRange } from "./range";
 import { useTokens } from "./theme";
 
 export interface LineInput {
@@ -21,28 +23,33 @@ interface LineCardProps {
   subtitle?: string;
   takeaway?: ReactNode;
   lines: LineInput[];
-  start: string;
   yFormat: (v: number) => string;
   band?: [number, number];
   bandLabel?: string;
   breaks?: boolean;
   zeroLine?: boolean;
+  /** Mark major economic events (default on). */
+  events?: boolean;
   height?: number;
 }
 
 export function LineCard(p: LineCardProps) {
   const t = useTokens();
-  const lines = p.lines.map((l) => ({ ...l, pts: since(l.points ?? l.s.points, p.start) }));
+  const { range, start } = useRange();
+  const lines = p.lines.map((l) => ({ ...l, pts: since(l.points ?? l.s.points, start) }));
+  const firstDate = lines.map((l) => l.pts[0]?.[0] ?? "9999").sort()[0];
+  const lastDate = lines.map((l) => l.pts.at(-1)?.[0] ?? "").sort().at(-1)!;
   const freq = p.lines[0].s.freq;
   const hasForecast = p.lines.some((l) => l.s.forecast_from);
   const option = useCallback(
     (width: number) =>
       lineOption({
         t, width, freq, yFormat: p.yFormat, band: p.band, zeroLine: p.zeroLine, endLabels: true,
-        breaks: p.breaks ? p.lines[0].s.breaks?.filter((b) => b.date >= p.start) : undefined,
+        breaks: p.breaks ? p.lines[0].s.breaks?.filter((b) => b.date >= firstDate) : undefined,
+        events: p.events === false ? undefined : eventsBetween(firstDate, lastDate),
         series: lines.map((l) => ({ name: l.name, points: l.pts, color: l.color, step: l.step, forecastFrom: l.s.forecast_from })),
       }),
-    [t, p.start, ...p.lines.map((l) => l.s)],
+    [t, start, ...p.lines.map((l) => l.s)],
   );
 
   const legend: LegendEntry[] = [
@@ -63,10 +70,17 @@ export function LineCard(p: LineCardProps) {
     num: lines.map((_, i) => i + 1),
   };
 
+  // Say so when a series can't reach back as far as the chosen range.
+  const late = [...lines].filter((l) => l.pts.length).sort((a, b) => (a.pts[0][0] < b.pts[0][0] ? 1 : -1))[0];
+  const lateYear = late ? Number(late.pts[0][0].slice(0, 4)) : 0;
+  const startsLate = range !== "5y" && lateYear > Number(start.slice(0, 4)) + 1;
+  const note = `${lines.length > 1 ? `${late?.name} data` : "Data"} starts ${lateYear}`;
+  const subtitle = startsLate ? `${p.subtitle ?? ""}${p.subtitle ? " · " : ""}${note}` : p.subtitle;
+
   const s0 = lines[0].s;
   const latest = (s0.forecast_from ? s0.points.filter(([d]) => d < s0.forecast_from!) : s0.points).at(-1)![0];
   return (
-    <ChartCard title={p.title} subtitle={p.subtitle} takeaway={p.takeaway} legend={legend}
+    <ChartCard title={p.title} subtitle={subtitle} takeaway={p.takeaway} legend={legend}
       sources={lines.map((l) => l.s.source)} asOf={`latest ${s0.forecast_from ? "actual " : ""}${periodLabel(latest, freq)}`} table={table}>
       <EChart option={option} height={p.height ?? 260} label={`${p.title}. Line chart; use Show table for values.`} />
     </ChartCard>
@@ -104,17 +118,17 @@ interface ColumnCardProps {
   subtitle?: string;
   takeaway?: ReactNode;
   s: Series;
-  start: string;
   name: string;
   yFormat: (v: number) => string;
 }
 
 export function ColumnCard(p: ColumnCardProps) {
   const t = useTokens();
-  const pts = since(p.s.points, p.start);
+  const { start } = useRange();
+  const pts = since(p.s.points, start);
   const option = useCallback(
     (width: number) => columnOption({ points: pts, forecastFrom: p.s.forecast_from, t, width, yFormat: p.yFormat, name: p.name }),
-    [t, p.s, p.start],
+    [t, p.s, start],
   );
   const isF = (d: string) => !!p.s.forecast_from && d >= p.s.forecast_from;
   return (

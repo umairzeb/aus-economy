@@ -37,6 +37,9 @@ RBA_TABLES = {
     "e2": "E2 Household finances, selected ratios",
 }
 
+# Series with `rba_hist` splice a frozen RBA history workbook in front of the
+# current CSV, extending them back to 1969.
+
 # section: prices | jobs | growth | trade | housing | population | money | spending | budget
 SERIES = [
     # --- Jobs ---
@@ -118,10 +121,11 @@ SERIES = [
     dict(id="cash_rate", title="RBA cash rate target", unit="%", section="money", freq="event",
          rba=("a2", "ARBAMPCNCRT"), notes="One point per RBA decision; draw as a step line."),
     dict(id="bond_10y", title="10-year government bond yield", unit="%", section="money", freq="M",
-         rba=("f2.1", "FCMYGBAG10")),
-    dict(id="aud_usd", title="AUD/USD", unit="US$", section="money", freq="M", rba=("f11", "FXRUSD")),
+         rba=("f2.1", "FCMYGBAG10"), rba_hist="f02histhist"),
+    dict(id="aud_usd", title="AUD/USD", unit="US$", section="money", freq="M", rba=("f11", "FXRUSD"),
+         rba_hist="f11hist-1969-2009"),
     dict(id="aud_twi", title="AUD trade-weighted index", unit="index", section="money", freq="M",
-         rba=("f11", "FXRTWI")),
+         rba=("f11", "FXRTWI"), rba_hist="f11hist-1969-2009"),
 
     # --- Spending ---
     dict(id="household_spending_yoy", title="Household spending growth", unit="% y/y", section="spending",
