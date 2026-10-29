@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -22,15 +23,28 @@ def http() -> requests.Session:
     global _session
     if _session is None:
         _session = requests.Session()
-        _session.headers["User-Agent"] = USER_AGENT
+        _session.headers.update({
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-AU,en;q=0.9",
+        })
     return _session
 
 
-def get(url: str, **kwargs) -> requests.Response:
+def get(url: str, retries: int = 0, **kwargs) -> requests.Response:
+    """GET with optional retries on timeouts, dropped connections and 5xx errors."""
     kwargs.setdefault("timeout", 120)
-    r = http().get(url, **kwargs)
-    r.raise_for_status()
-    return r
+    for attempt in range(retries + 1):
+        try:
+            r = http().get(url, **kwargs)
+            if r.status_code < 500 or attempt == retries:
+                r.raise_for_status()
+                return r
+        except (requests.Timeout, requests.ConnectionError):
+            if attempt == retries:
+                raise
+        time.sleep(10 * (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 _MONTHS = {m: i for i, m in enumerate(

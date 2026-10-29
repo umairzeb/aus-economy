@@ -2,13 +2,17 @@
 data/manifest.json. Run with:  python -m pipeline.build
 
 One failing source never stops the run: its error is recorded in the
-manifest and the previous JSON file (if any) is left in place.
+manifest and the previous JSON file (if any) is left in place. The exit code
+is non-zero only for sanity warnings, data stale for over STALE_DAYS, or a
+failed source with nothing to fall back on.
 """
 from __future__ import annotations
 
+import json
 import sys
 import time
 import traceback
+from datetime import datetime, timezone
 
 from . import bundles, derived
 from .registry import ABS_FLOWS, RBA_TABLES, SERIES
@@ -16,6 +20,9 @@ from .sources import abs as abs_
 from .sources import rba
 from .transforms import splice, value_at_or_before
 from .util import DATA_DIR, now_iso, write_json
+
+# A source may keep serving its last good data for this long before the run fails.
+STALE_DAYS = 14
 
 # Plausible range for each headline's latest value. Catches unit/multiplier
 # mistakes and upstream format changes before they reach the dashboard.
@@ -145,14 +152,34 @@ def main() -> int:
         manifest["bundles"].append({k: b.get(k) for k in ("id", "title", "section", "unit", "as_of")}
                                    | {"items": len(b["items"])})
 
+    # Files this run didn't rewrite keep their last good data. That's fine for a
+    # short outage, but a source stale for longer than STALE_DAYS fails the run.
+    written = {f"series/{sid}.json" for sid in built} | {f"bundles/{b['id']}.json" for b in bundle_list}
+    stale, too_stale = [], []
+    for f in sorted(DATA_DIR.glob("*/*.json")):
+        rel = f.relative_to(DATA_DIR).as_posix()
+        if rel in written:
+            continue
+        updated = json.loads(f.read_text(encoding="utf-8")).get("updated")
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(updated)).days if updated else None
+        stale.append({"file": rel, "updated": updated, "age_days": age})
+        if age is None or age > STALE_DAYS:
+            too_stale.append(rel)
+
     manifest["warnings"] = warnings
+    manifest["stale"] = stale
     write_json(DATA_DIR / "manifest.json", manifest)
 
-    print(f"\n{len(built)} series, {len(bundle_list)} bundles, {len(manifest['errors'])} errors, "
-          f"{len(warnings)} warnings in {time.time() - t0:.0f}s")
+    print(f"\n{len(built)} series, {len(bundle_list)} bundles, {len(manifest['errors'])} source errors, "
+          f"{len(stale)} stale files, {len(warnings)} warnings in {time.time() - t0:.0f}s")
     for w in warnings:
         print("  WARN", w)
-    return 1 if manifest["errors"] or warnings else 0
+    if stale:
+        oldest = max(x["age_days"] or 0 for x in stale)
+        print(f"  STALE {len(stale)} files kept from earlier runs (oldest {oldest} days)")
+    # A failed source with no earlier data to fall back on also fails the run.
+    unreplaced = bool(manifest["errors"]) and not stale
+    return 1 if warnings or too_stale or unreplaced else 0
 
 
 if __name__ == "__main__":
