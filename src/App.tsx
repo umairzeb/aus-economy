@@ -3,7 +3,8 @@ import { loadData, type Data } from "./data";
 import { buildSummary, buildTiles } from "./insights";
 import { BudgetSection, EarnSection, GoingSection, YouSection } from "./sections";
 import { StatTile } from "./components/ui";
-import { RangeBar, RangeContext, useRangeState } from "./range";
+import { RangeContext, useRangeState } from "./range";
+import { TopBar } from "./TopBar";
 import { TokensContext, useThemeState, type ThemePref } from "./theme";
 
 const SERIES = [
@@ -36,7 +37,7 @@ export default function App() {
   }, [data]);
 
   const updated = data
-    ? new Date(data.manifest.generated).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })
+    ? new Date(data.manifest.generated).toLocaleString("en-AU", { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" })
     : null;
 
   return (
@@ -53,27 +54,23 @@ export default function App() {
         {error && <p className="status-msg">Couldn't load the data ({error}). Run the pipeline: python -m pipeline.build</p>}
         {!data && !error && <p className="status-msg">Loading the latest numbers…</p>}
 
+        {data && <TopBar range={range} onRange={setRange} />}
+
         {data && (
           <main>
-            <section className="summary" aria-label="Summary">
-              <h2>In short</h2>
-              <p>{buildSummary(data).join(" ")}</p>
-              <div className="meta">Data updated {updated}. Each figure is the latest official release.</div>
+            <section id="overview" className="overview" aria-label="Overview">
+              <div className="summary">
+                <h2>In short</h2>
+                <p>{buildSummary(data).join(" ")}</p>
+                <div className="meta">Refreshed every day from official releases. Last checked {updated}.</div>
+              </div>
+
+              <div className="tiles">
+                {buildTiles(data).map((tile) => <StatTile key={tile.label} {...tile} />)}
+              </div>
             </section>
 
-            <nav className="section-nav" aria-label="Sections">
-              <a href="#going">How are things going?</a>
-              <a href="#earn">How Australia makes money</a>
-              <a href="#budget">Government money</a>
-              <a href="#you">What it means for me</a>
-            </nav>
-
-            <div className="tiles">
-              {buildTiles(data).map((tile) => <StatTile key={tile.label} {...tile} />)}
-            </div>
-
             <RangeContext.Provider value={{ range, start }}>
-              <RangeBar range={range} onChange={setRange} />
               <GoingSection data={data} />
               <EarnSection data={data} />
               <BudgetSection data={data} />
