@@ -114,20 +114,12 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline
 
 /* Summary */
 .summary {
-  margin: 20px 0 8px; padding: 18px 20px; background: var(--surface-1);
+  margin: 16px 0 8px; padding: 18px 20px; background: var(--surface-1);
   border: 1px solid var(--border); border-radius: 12px;
 }
 .summary h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 6px; font-weight: 600; }
 .summary p { font-size: 18px; line-height: 1.5; margin: 0; max-width: 75ch; }
 .summary .meta { font-size: 13px; color: var(--text-muted); margin-top: 10px; }
-
-/* Section nav */
-.section-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 4px; }
-.section-nav a {
-  font-size: 13px; text-decoration: none; color: var(--text-secondary);
-  border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; background: var(--surface-1);
-}
-.section-nav a:hover { color: var(--text-primary); }
 
 /* Stat tiles */
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
@@ -158,12 +150,21 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline
 .chip.critical .dot { background: var(--status-critical); }
 .chip.neutral .dot { background: var(--axis-muted); }
 
-/* Range switch: one control above every chart, kept in reach while scrolling */
-.range-bar {
-  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin: 32px -16px 0; padding: 10px 16px; background: var(--page);
-  border-bottom: 1px solid var(--grid);
+/* Top bar: section links + chart range, kept in reach while scrolling */
+.topbar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px 16px; flex-wrap: wrap; margin: 16px -16px 0; padding: 8px 16px;
+  background: var(--page); border-bottom: 1px solid var(--grid);
 }
+.topbar-nav { position: relative; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.topbar-nav::-webkit-scrollbar { display: none; }
+.topbar-nav a {
+  flex: none; font-size: 14px; text-decoration: none; color: var(--text-secondary);
+  padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+}
+.topbar-nav a:hover { color: var(--text-primary); background: var(--surface-2); }
+.topbar-nav a[aria-current] { color: var(--text-primary); background: var(--surface-2); font-weight: 600; }
+.range-bar { display: flex; align-items: center; gap: 8px; flex: none; }
 .range-label { font-size: 13px; color: var(--text-secondary); }
 .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-1); }
 .segmented button {
@@ -174,8 +175,14 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline
 .segmented button:hover { color: var(--text-primary); background: var(--surface-2); }
 .segmented button[aria-pressed="true"] { background: var(--text-primary); color: var(--page); font-weight: 600; }
 
+.overview { scroll-margin-top: 110px; }
+.card { scroll-margin-top: 110px; }
+a.tile-link { color: inherit; text-decoration: none; }
+a.tile-link:hover { border-color: var(--axis); }
+.tile-more { color: var(--accent); }
+
 /* Sections */
-.section { margin-top: 40px; scroll-margin-top: 64px; }
+.section { margin-top: 40px; scroll-margin-top: 110px; }
 .section > header { margin-bottom: 16px; }
 .section h2 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
 .section .lede { color: var(--text-secondary); margin: 6px 0 0; max-width: 75ch; }

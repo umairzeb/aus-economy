@@ -4,7 +4,17 @@ A plain-English dashboard of the Australian economy: how the country makes money
 
 ## Status
 
-Step 1 (data pipeline) and step 2 (glance page) done. Next: deep-dive pages.
+Live dashboard with daily data refresh. Published to GitHub Pages at https://umairzeb.github.io/aus-economy/ once Pages is enabled.
+
+## Daily refresh and hosting
+
+`.github/workflows/refresh-and-deploy.yml` runs every day at 6:30am AEST (7:30am AEDT):
+
+1. runs the pipeline and commits any new data to `main`
+2. builds the site and publishes it to GitHub Pages
+3. if a data source failed, the run is marked failed (GitHub emails you), but the site still publishes with the data that did update
+
+It also redeploys on every push to `main`, and can be run by hand from the repo's Actions tab ("Run workflow").
 
 ## Website
 
@@ -20,6 +30,7 @@ npm run build    # static site in dist/
 - `src/sections.tsx`: the four question sections
 - `src/insights.ts`: rules that turn numbers into plain-English readings (descriptive only, never advice)
 - `src/charts.ts`, `src/cards.tsx`: chart builders and chart cards (each card has a table view)
+- `src/TopBar.tsx`: sticky section links and chart range
 - `src/range.tsx`: the page-wide 5y / 10y / 30y / All switch
 - `src/events.ts`: major events marked on time charts
 - `src/styles.css`: colour tokens for light and dark mode
