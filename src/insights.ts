@@ -1,6 +1,6 @@
 // Plain-English readings generated from the data. Rules only describe what the
 // numbers show; they never recommend actions.
-import { last, since, yearAgo, type Data, type Series } from "./data";
+import { last, since, valueAt, yearAgo, type Data, type Series } from "./data";
 import { compact, fmt, pct, periodLabel, signed } from "./format";
 import type { TileProps, Tone } from "./components/ui";
 
@@ -34,7 +34,7 @@ export function buildTiles(data: Data): TileProps[] {
       v > hi ? { tone: "serious", text: "Above the RBA's 2–3% target" }
         : v < lo ? { tone: "warning", text: "Below the RBA's 2–3% target" }
           : { tone: "good", text: "Within the RBA's 2–3% target" };
-    tiles.push({ label: "Inflation", value: pct(v), delta: yoyDelta(cpi, false), chip,
+    tiles.push({ label: "Inflation", href: "#chart-inflation", value: pct(v), delta: yoyDelta(cpi, false), chip,
       read: "How much prices rose over the past year.", spark: spark(cpi), asOf: asOf(cpi) });
   }
 
@@ -44,7 +44,7 @@ export function buildTiles(data: Data): TileProps[] {
     const ago = yearAgo(ur) ?? v;
     const d = v - ago;
     const under = S.underemployment_rate ? last(S.underemployment_rate)[1] : undefined;
-    tiles.push({ label: "Unemployment", value: pct(v), delta: yoyDelta(ur, false),
+    tiles.push({ label: "Unemployment", href: "#chart-jobs", value: pct(v), delta: yoyDelta(ur, false),
       chip: d > 0.2 ? { tone: "warning", text: "Job market softening" } : d < -0.2 ? { tone: "good", text: "Job market tightening" } : { tone: "neutral", text: "Broadly steady" },
       read: under !== undefined ? `Another ${pct(under)} have a job but want more hours.` : undefined,
       spark: spark(ur), asOf: asOf(ur) });
@@ -53,9 +53,9 @@ export function buildTiles(data: Data): TileProps[] {
   const rw = S.real_wage_growth;
   if (rw) {
     const v = last(rw)[1];
-    tiles.push({ label: "Real wage growth", value: signed(v, 1, "%"), delta: yoyDelta(rw, true),
+    tiles.push({ label: "Real wage growth", href: "#chart-wages", value: signed(v, 1, "%"), delta: yoyDelta(rw, true),
       chip: v < 0 ? { tone: "serious", text: "Prices rising faster than pay" } : { tone: "good", text: "Pay rising faster than prices" },
-      read: S.wpi_yoy && S.cpi_yoy_q ? `Wages ${signed(last(S.wpi_yoy)[1], 1, "%")}, prices ${signed(last(S.cpi_yoy_q)[1], 1, "%")}.` : undefined,
+      read: S.wpi_yoy && S.cpi_yoy_q ? `${periodLabel(last(rw)[0], "Q")}: wages ${signed(valueAt(S.wpi_yoy, last(rw)[0]) ?? 0, 1, "%")}, prices ${signed(valueAt(S.cpi_yoy_q, last(rw)[0]) ?? 0, 1, "%")}.` : undefined,
       spark: spark(rw), asOf: asOf(rw) });
   }
 
@@ -64,7 +64,7 @@ export function buildTiles(data: Data): TileProps[] {
     const v = last(cash)[1];
     const ago = yearAgo(cash, new Date().toISOString().slice(0, 10)) ?? v;
     const d = v - ago;
-    tiles.push({ label: "RBA cash rate", value: pct(v, 2),
+    tiles.push({ label: "RBA cash rate", href: "#chart-borrowing", value: pct(v, 2),
       delta: { text: pts(d, 2), tone: "neutral", vs: "vs a year ago" },
       chip: d > 0 ? { tone: "warning", text: "Rates rising" } : d < 0 ? { tone: "good", text: "Rates falling" } : { tone: "neutral", text: "On hold" },
       read: "Sets the cost of borrowing across the economy.",
@@ -75,7 +75,7 @@ export function buildTiles(data: Data): TileProps[] {
   if (gpc) {
     const v = last(gpc)[1];
     const g = S.gdp_growth_yoy ? last(S.gdp_growth_yoy)[1] : undefined;
-    tiles.push({ label: "Growth per person", value: signed(v, 1, "%"), delta: yoyDelta(gpc, true),
+    tiles.push({ label: "Growth per person", href: "#chart-growth", value: signed(v, 1, "%"), delta: yoyDelta(gpc, true),
       chip: v < 0 ? { tone: "serious", text: "Shrinking per person" } : v < 1 ? { tone: "warning", text: "Weak" } : { tone: "good", text: "Growing" },
       read: g !== undefined ? `Total economy ${signed(g, 1, "%")}; the rest is population growth.` : undefined,
       spark: spark(gpc), asOf: asOf(gpc) });
@@ -83,7 +83,7 @@ export function buildTiles(data: Data): TileProps[] {
 
   const mr = S.mortgage_rate_discounted;
   if (mr) {
-    tiles.push({ label: "Mortgage rate", value: pct(last(mr)[1], 2), delta: yoyDelta(mr, false, (v) => pts(v, 2)),
+    tiles.push({ label: "Mortgage rate", href: "#chart-borrowing", value: pct(last(mr)[1], 2), delta: yoyDelta(mr, false, (v) => pts(v, 2)),
       read: "Typical discounted variable rate at the big banks.", spark: spark(mr), asOf: asOf(mr) });
   }
 

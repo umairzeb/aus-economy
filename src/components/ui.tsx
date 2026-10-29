@@ -51,11 +51,13 @@ export interface TileProps {
   read?: string;
   spark?: Point[];
   asOf: string;
+  /** Link to the chart that explains this number. */
+  href?: string;
 }
 
-export function StatTile({ label, value, delta, chip, read, spark, asOf }: TileProps) {
-  return (
-    <div className="tile">
+export function StatTile({ label, value, delta, chip, read, spark, asOf, href }: TileProps) {
+  const body = (
+    <>
       <div className="label">{label}</div>
       <div className="value-row">
         <div className="value">{value}</div>
@@ -68,9 +70,10 @@ export function StatTile({ label, value, delta, chip, read, spark, asOf }: TileP
       )}
       {chip && <Chip tone={chip.tone}>{chip.text}</Chip>}
       {read && <div className="read">{read}</div>}
-      <div className="asof">{asOf}</div>
-    </div>
+      <div className="asof">{asOf}{href && <span className="tile-more" aria-hidden="true"> · See chart</span>}</div>
+    </>
   );
+  return href ? <a className="tile tile-link" href={href}>{body}</a> : <div className="tile">{body}</div>;
 }
 
 export interface LegendEntry {
@@ -123,6 +126,8 @@ export function DataTable({ head, rows, num = [] }: TableData) {
 }
 
 interface CardProps {
+  /** Anchor id so tiles and links can jump to this chart. */
+  anchor?: string;
   title: string;
   subtitle?: string;
   takeaway?: ReactNode;
@@ -133,12 +138,12 @@ interface CardProps {
   children: ReactNode;
 }
 
-export function ChartCard({ title, subtitle, takeaway, legend, sources, asOf, table, children }: CardProps) {
+export function ChartCard({ anchor, title, subtitle, takeaway, legend, sources, asOf, table, children }: CardProps) {
   const [showTable, setShowTable] = useState(false);
   const id = useId();
   const uniq = sources.filter((s, i) => sources.findIndex((x) => x.name === s.name && x.dataset === s.dataset) === i);
   return (
-    <article className="card" aria-labelledby={id}>
+    <article className="card" id={anchor} aria-labelledby={id}>
       <h3 id={id}>{title}</h3>
       {subtitle && <p className="subtitle">{subtitle}</p>}
       {takeaway && <p className="takeaway">{takeaway}</p>}
