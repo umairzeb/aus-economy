@@ -260,6 +260,59 @@ export function barOption(o: BarOpts): EChartsOption {
   };
 }
 
+// ---------- Grouped horizontal bars (two measures per category) ----------
+
+export interface GroupedOpts {
+  categories: string[];
+  series: { name: string; values: number[]; color: string }[];
+  t: Tokens;
+  width: number;
+  valueFormat: (v: number) => string;
+}
+
+export const groupedHeight = (n: number) => n * 46 + 16;
+
+export function groupedBarOption(o: GroupedOpts): EChartsOption {
+  const { t } = o;
+  const labelWidth = Math.round(Math.min(160, Math.max(90, o.width * 0.3)));
+  return {
+    animation: false,
+    textStyle: { fontFamily: FONT },
+    grid: { left: 4, right: 52, top: 4, bottom: 4 },
+    xAxis: { type: "value", show: false, min: 0 },
+    yAxis: {
+      type: "category",
+      inverse: true,
+      data: o.categories,
+      axisTick: { show: false },
+      axisLine: { show: true, lineStyle: { color: t.axis } },
+      axisLabel: { color: t.textSecondary, fontSize: 12, width: labelWidth, overflow: "truncate", margin: 8 },
+    },
+    tooltip: {
+      ...tooltipBase(t),
+      trigger: "axis",
+      axisPointer: { type: "shadow", shadowStyle: { color: t.grid, opacity: 0.4 } },
+      formatter: (raw) => {
+        const ps = (Array.isArray(raw) ? raw : [raw]) as unknown as { dataIndex: number; seriesIndex: number }[];
+        const i = ps[0].dataIndex;
+        return `<div class="tt"><div class="tt-head">${escapeHtml(o.categories[i])}</div>${o.series
+          .map((s) => ttRow(s.color, o.valueFormat(s.values[i]), s.name, true)).join("")}</div>`;
+      },
+    },
+    series: o.series.map((s) => ({
+      type: "bar" as const,
+      name: s.name,
+      data: s.values,
+      barMaxWidth: 12,
+      barGap: "25%",
+      barCategoryGap: "30%",
+      itemStyle: { color: s.color, borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: "right" as const, color: t.textSecondary, fontSize: 11, formatter: (p: { value: unknown }) => o.valueFormat(p.value as number), distance: 4 },
+      emphasis: { itemStyle: { opacity: 0.85 } },
+    })),
+  };
+}
+
 // ---------- Column chart for financial years (budget) ----------
 
 export interface ColumnOpts {

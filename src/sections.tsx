@@ -1,4 +1,4 @@
-// The four questions the dashboard answers, each a section of cards.
+// The questions the dashboard answers, each a section of cards.
 import type { ReactNode } from "react";
 import { actuals, last, valueAt, type Bundle, type Data } from "./data";
 import { BarCard, ColumnCard, LineCard } from "./cards";
@@ -8,7 +8,7 @@ import { billions, fmt, pct, periodLabel, signed } from "./format";
 import { useRange } from "./range";
 import { useTokens } from "./theme";
 
-function Section({ id, title, lede, children }: { id: string; title: string; lede: string; children: ReactNode }) {
+export function Section({ id, title, lede, children }: { id: string; title: string; lede: string; children: ReactNode }) {
   return (
     <section className="section" id={id} aria-labelledby={`${id}-h`}>
       <header>
@@ -41,7 +41,7 @@ function topWithOther(b: Bundle, n: number, otherLabel: string) {
 }
 
 /** Lower-case the first letter for use mid-sentence, leaving acronyms alone. */
-const lc = (s: string) => s.replace(/\S+/g, (w) => (/[A-Z]{2,}/.test(w) ? w : w.toLowerCase()));
+export const lc = (s: string) => s.replace(/\S+/g, (w) => (/[A-Z]{2,}/.test(w) ? w : w.toLowerCase()));
 
 const changeText = (c: number | null | undefined, what = "on the previous 12 months") =>
   c === null || c === undefined ? "" : `${signed(c, 1, "%")} ${what}`;
