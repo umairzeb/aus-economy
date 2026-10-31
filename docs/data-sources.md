@@ -5,7 +5,7 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 | Source | Access | Update cadence | Used for |
 |---|---|---|---|
 | ABS Data API (`data.api.abs.gov.au`) | SDMX REST, CSV output | Monthly / quarterly per release | CPI, jobs, wages, GDP, trade, housing, population, spending |
-| RBA statistical tables (`rba.gov.au/statistics/tables/csv/`) | CSV files | Daily to quarterly | Cash rate, mortgage rates, bond yields, AUD, household debt |
+| RBA statistical tables (`rba.gov.au/statistics/tables/csv/`) | CSV files | Daily to quarterly | Cash rate, mortgage rates, bond yields, AUD, household debt, money supply, credit growth |
 | Budget Paper No. 1 tables (data.gov.au, Dept of Finance) | ZIP of CSVs via CKAN API | Yearly (May Budget) | Revenue by tax, spending by function, deficit and debt history |
 | ABS data cubes (abs.gov.au) | Excel, link found on the "latest-release" page | Yearly | Businesses opening and closing by size (Counts of Australian Businesses, 8165.0 Table 13) |
 | ASIC insolvency statistics | Excel, link found on the statistics page | Monthly | Companies entering administration (Series 1) |
@@ -30,11 +30,15 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - Tables carry empty placeholder rows past the latest date (e.g. E2 and H1 run to 2027), and some columns are discontinued (OIS ended Nov 2022). Always take the last non-empty value per series.
 - Send a browser-like User-Agent.
 - `bond_10y`, `aud_usd` and `aud_twi` splice frozen RBA history workbooks (`xls-hist/f02histhist.xls`, `xls-hist/f11hist-1969-2009.xls`, read with the calamine engine) in front of the current CSVs, giving monthly data from 1969-70. The joins line up without jumps.
+- Money supply: D1 gives 12-month growth in M3 (`DGFAM312`); M1 growth is worked out from the seasonally adjusted M1 level in D3 (`DMAM1S`). Australia publishes M1, M3 and broad money but no M2. Broad money moves almost exactly with M3, so it isn't drawn.
+- Credit growth (D1, 12-month ended): housing `DGFACH12`, personal `DGFACOP12`, non-financial business `DGFACBNF12` (from 2004; the older all-business series stopped in 2019 on a different definition, so it isn't spliced on).
 
 ## Budget
 
 - Dataset name pattern: `budget-YYYY-YYYY-and-portfolio-budget-statements-pbs-tables-and-data`. The pipeline tries the current year first and falls back to earlier years.
 - Key tables: 5.7 (receipts by tax head), 6.3 (expenses by function), 11.1 (receipts, payments, balance since 1970-71), 11.4 (net debt and interest).
+- Table 5.7 splits excise and customs duty by product (petrol, diesel, tobacco, beer, spirits and so on); these show when you tap that bar.
+- Table 6.3 has no split of "Other purposes". Budget Paper 1 (Statement 6) names its parts (GST and other general payments to the states, public debt interest, interest on public-sector super, natural disaster relief, the contingency reserve) but the amounts are only in the PDF, so the dashboard lists the parts without amounts.
 - Rows marked `(e)` are Treasury estimates. Series carry `forecast_from`, and the manifest headline uses the last actual year.
 - MYEFO (December) updates are a separate publication and not yet wired in.
 

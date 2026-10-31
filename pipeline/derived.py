@@ -6,7 +6,7 @@ returns a dict with at least id/title/unit/section/freq/points/source.
 from __future__ import annotations
 
 from . import transforms as t
-from .registry import ABS_FLOWS, CPI_COMPONENTS
+from .registry import ABS_FLOWS, CPI_COMPONENTS, RBA_TABLES
 from .sources import abs as abs_
 from .sources import budget
 
@@ -78,6 +78,9 @@ def from_others(got) -> list[dict]:
              points=t.subtract(q("wpi_yoy"), q("cpi_yoy_q"), 1),
              source={"name": ABS, "dataset": ABS_FLOWS["WPI"] + "; " + ABS_FLOWS["CPI"], "url": abs_.BASE},
              notes="Wage growth minus inflation. Negative means pay is buying less than a year ago."),
+        dict(id="money_m1_growth", title="M1 money supply growth", unit="% y/y", section="money", freq="M",
+             points=t.pct_change(q("money_m1"), 12, 1),
+             source={"name": RBA, "dataset": RBA_TABLES["d3"], "url": "https://www.rba.gov.au/statistics/tables/"}),
         dict(id="employment_change", title="Jobs added (monthly)", unit="'000", section="jobs", freq="M",
              points=t.diff(q("employed_persons"), 1, 1),
              source={"name": ABS, "dataset": ABS_FLOWS["LF"], "url": abs_.BASE}),

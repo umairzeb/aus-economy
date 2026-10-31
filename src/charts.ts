@@ -189,6 +189,8 @@ export interface BarItem {
   color: string;
   /** Extra tooltip line, e.g. "35% of exports · +11% on last year". */
   extra?: string;
+  /** Further tooltip lines: a breakdown or a note on what the bar covers. */
+  details?: string[];
 }
 
 export interface RefLine {
@@ -240,7 +242,7 @@ export function barOption(o: BarOpts): EChartsOption {
       trigger: "item",
       formatter: (p) => {
         const i = o.items[(p as { dataIndex: number }).dataIndex];
-        return `<div class="tt">${ttRow(i.color, o.valueFormat(i.value), i.label, true)}${i.extra ? `<div class="tt-extra">${escapeHtml(i.extra)}</div>` : ""}</div>`;
+        return `<div class="tt">${ttRow(i.color, o.valueFormat(i.value), i.label, true)}${i.extra ? `<div class="tt-extra">${escapeHtml(i.extra)}</div>` : ""}${i.details?.length ? `<div class="tt-details">${i.details.map((d) => `<div>${escapeHtml(d)}</div>`).join("")}</div>` : ""}</div>`;
       },
     },
     series: [

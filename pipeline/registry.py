@@ -37,6 +37,8 @@ RBA_TABLES = {
     "f11": "F11 Exchange rates (monthly)",
     "e2": "E2 Household finances, selected ratios",
     "f7": "F7 Business lending rates",
+    "d1": "D1 Growth in selected financial aggregates",
+    "d3": "D3 Monetary aggregates",
 }
 
 # Series with `rba_hist` splice a frozen RBA history workbook in front of the
@@ -128,6 +130,17 @@ SERIES = [
          rba_hist="f11hist-1969-2009"),
     dict(id="aud_twi", title="AUD trade-weighted index", unit="index", section="money", freq="M",
          rba=("f11", "FXRTWI"), rba_hist="f11hist-1969-2009"),
+    # Money supply and credit. Australia publishes M1, M3 and broad money (no M2).
+    dict(id="money_m1", title="M1 money supply (seasonally adjusted)", unit="$bn", section="money", freq="M",
+         rba=("d3", "DMAM1S"), hidden=True),
+    dict(id="money_m3_growth", title="M3 money supply growth", unit="% y/y", section="money", freq="M",
+         rba=("d1", "DGFAM312")),
+    dict(id="credit_housing_growth", title="Housing credit growth", unit="% y/y", section="money", freq="M",
+         rba=("d1", "DGFACH12")),
+    dict(id="credit_business_growth", title="Business credit growth", unit="% y/y", section="money", freq="M",
+         rba=("d1", "DGFACBNF12"), notes="Lending to non-financial businesses; series starts 2004."),
+    dict(id="credit_personal_growth", title="Personal credit growth", unit="% y/y", section="money", freq="M",
+         rba=("d1", "DGFACOP12"), notes="Car loans, credit cards and other personal loans."),
 
     # --- Spending ---
     dict(id="household_spending_yoy", title="Household spending growth", unit="% y/y", section="spending",

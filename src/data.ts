@@ -34,6 +34,10 @@ export interface BundleItem {
   full_label?: string;
   entry_rate?: number;
   exit_rate?: number;
+  /** Official sub-items, e.g. excise by product. */
+  parts?: { label: string; value: number }[];
+  /** What a vague category covers, when the source names it but gives no amounts. */
+  description?: string;
 }
 
 export interface Bundle {
