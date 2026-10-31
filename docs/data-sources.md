@@ -7,7 +7,6 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 | ABS Data API (`data.api.abs.gov.au`) | SDMX REST, CSV output | Monthly / quarterly per release | CPI, jobs, wages, GDP, trade, housing, population, spending |
 | RBA statistical tables (`rba.gov.au/statistics/tables/csv/`) | CSV files | Daily to quarterly | Cash rate, mortgage rates, bond yields, AUD, household debt |
 | Budget Paper No. 1 tables (data.gov.au, Dept of Finance) | ZIP of CSVs via CKAN API | Yearly (May Budget) | Revenue by tax, spending by function, deficit and debt history |
-| Jobs and Skills Australia, Internet Vacancy Index | XLSX, URL changes monthly (scraped from page) | Monthly | Online job ads by occupation |
 
 ## ABS
 
@@ -36,10 +35,10 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - Rows marked `(e)` are Treasury estimates. Series carry `forecast_from`, and the manifest headline uses the last actual year.
 - MYEFO (December) updates are a separate publication and not yet wired in.
 
-## Jobs and Skills Australia
+## Job vacancies (replaced Jobs and Skills Australia)
 
-- Page: <https://www.jobsandskills.gov.au/data/internet-vacancy-index>. The pipeline finds the `anzsco2_occupations_states_and_territories` workbook link and reads the `Trend` sheet.
-- Level 1 = total, level 2 = 8 major occupation groups, level 3 = ~43 sub-major groups.
+- The "Where the jobs are" chart uses ABS Job Vacancies by industry (`JV`, original series, compared with the same quarter a year earlier). It is quarterly; the survey month is February, May, August or November.
+- It used to use the Jobs and Skills Australia Internet Vacancy Index (online job ads by occupation, monthly). jobsandskills.gov.au stalls requests from cloud servers such as GitHub Actions, even with retries and normal browser headers, while the same files download instantly from a home connection. The daily refresh failed every day, so the source was dropped (Oct 2026). Bringing it back would need the data fetched from a home connection.
 
 ## Not yet covered (candidates for later steps)
 
@@ -51,4 +50,4 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 
 ## Licensing (check before public launch)
 
-ABS and data.gov.au budget data are CC BY 4.0 and need attribution. RBA and JSA content is reusable with attribution under their copyright pages. Confirm the exact terms and attribution wording before the site goes public.
+ABS and data.gov.au budget data are CC BY 4.0 and need attribution. RBA content is reusable with attribution under their copyright pages. Confirm the exact terms and attribution wording before the site goes public.

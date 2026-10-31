@@ -15,7 +15,7 @@ const SERIES = [
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
-  "cpi_breakdown", "dwelling_price_by_state", "job_ads_by_occupation",
+  "cpi_breakdown", "dwelling_price_by_state", "job_vacancies_by_industry",
 ];
 
 const NEXT_THEME: Record<ThemePref, ThemePref> = { auto: "light", light: "dark", dark: "auto" };
@@ -46,7 +46,7 @@ export default function App() {
         <header className="site-header">
           <div>
             <h1>Australia's economy, in plain English</h1>
-            <p className="tagline">How the country makes and spends money, how things are going, and what it means for you. Built from official ABS, RBA, Budget and Jobs and Skills Australia data.</p>
+            <p className="tagline">How the country makes and spends money, how things are going, and what it means for you. Built from official ABS, RBA and Budget data.</p>
           </div>
           <button type="button" className="theme-toggle" onClick={() => setPref(NEXT_THEME[pref])}>{THEME_LABEL[pref]}</button>
         </header>
@@ -80,7 +80,7 @@ export default function App() {
         )}
 
         <footer className="site-footer">
-          <p>Sources: Australian Bureau of Statistics, Reserve Bank of Australia, Australian Government Budget Paper No. 1 (data.gov.au), and Jobs and Skills Australia. ABS and Budget data are used under CC BY 4.0.</p>
+          <p>Sources: Australian Bureau of Statistics, Reserve Bank of Australia and Australian Government Budget Paper No. 1 (data.gov.au). ABS and Budget data are used under CC BY 4.0.</p>
           <p>This site describes official statistics. It is not financial advice.</p>
         </footer>
       </div>

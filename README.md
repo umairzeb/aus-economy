@@ -1,10 +1,10 @@
 # aus-economy
 
-A plain-English dashboard of the Australian economy: how the country makes money, how it spends it, how things are going, and what it means for everyday decisions. All data comes from official sources (ABS, RBA, Treasury/Finance, Jobs and Skills Australia).
+A plain-English dashboard of the Australian economy: how the country makes money, how it spends it, how things are going, and what it means for everyday decisions. All data comes from official sources (ABS, RBA, Treasury/Finance).
 
 ## Status
 
-Live dashboard with daily data refresh. Published to GitHub Pages at https://umairzeb.github.io/aus-economy/ once Pages is enabled.
+Live dashboard with daily data refresh. Live at https://umairzeb.github.io/aus-economy/
 
 ## Daily refresh and hosting
 
@@ -12,9 +12,9 @@ Live dashboard with daily data refresh. Published to GitHub Pages at https://uma
 
 1. runs the pipeline and commits any new data to `main`
 2. builds the site and publishes it to GitHub Pages
-3. if a data source failed, the run is marked failed (GitHub emails you), but the site still publishes with the data that did update
+3. if a source is down, its last good data stays on the site and the run carries on; the run is only marked failed (GitHub emails you) if a source has been down for over 14 days or a number looks wrong
 
-It also redeploys on every push to `main`, and can be run by hand from the repo's Actions tab ("Run workflow").
+It also redeploys on every push to `main`, and can be run by hand from the repo's Actions tab ("Run workflow"). Tick "check only" to test the data sources on any branch without committing or deploying.
 
 ## Website
 
@@ -49,11 +49,11 @@ Writes:
 - `public/data/bundles/<id>.json`: cross-sections for bar charts (exports by country, budget mix, state comparisons)
 - `public/data/manifest.json`: every series' latest, previous and year-ago values, plus run errors and sanity warnings
 
-The build exits non-zero if any source fails or a value falls outside its sanity range. A failed source never blocks the others.
+A failed source never blocks the others: its last good files stay in place and are listed under `stale` in the manifest. The build exits non-zero only if a value falls outside its sanity range, a source has been stale for over 14 days, or a failed source has no earlier data.
 
 Code layout:
 
-- `pipeline/sources/`: one module per publisher (`abs`, `rba`, `budget`, `jsa`)
+- `pipeline/sources/`: one module per publisher (`abs`, `rba`, `budget`)
 - `pipeline/registry.py`: directly-sourced series (add a series here)
 - `pipeline/derived.py`: computed series (growth rates, real wages, spliced CPI)
 - `pipeline/bundles.py`: cross-sections

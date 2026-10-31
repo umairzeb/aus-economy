@@ -207,13 +207,16 @@ export function barOption(o: BarOpts): EChartsOption {
     animation: false,
     textStyle: { fontFamily: FONT },
     grid: { left: 4, right: 52, top: ref.length ? 22 : 4, bottom: ref.length ? 18 : 4 },
-    xAxis: { type: "value", show: false, min: hasNeg ? undefined : 0 },
+    // Extra room left of zero so negative value labels fit before the category names.
+    xAxis: { type: "value", show: false, min: hasNeg ? (e: { min: number; max: number }) => e.min - (Math.max(e.max, 0) - e.min) * 0.2 : 0 },
     yAxis: {
       type: "category",
       inverse: true,
       data: o.items.map((i) => i.label),
       axisTick: { show: false },
-      axisLine: { show: true, lineStyle: { color: t.axis } },
+      // With negative bars the names stay at the left edge (not on the zero line) and a
+      // separate baseline is drawn at zero, so bars never run into the names.
+      axisLine: { show: !hasNeg, onZero: false, lineStyle: { color: t.axis } },
       axisLabel: { color: t.textSecondary, fontSize: 12, width: labelWidth, overflow: "truncate", margin: 8 },
     },
     tooltip: {
@@ -232,21 +235,24 @@ export function barOption(o: BarOpts): EChartsOption {
         barCategoryGap: "32%",
         label: { show: true, color: t.textSecondary, fontSize: 12, formatter: (p) => o.valueFormat(p.value as number), distance: 6 },
         emphasis: { itemStyle: { opacity: 0.85 } },
-        markLine: ref.length
+        markLine: ref.length || hasNeg
           ? {
               silent: true,
               symbol: "none",
               lineStyle: { color: t.textMuted, width: 1, type: "solid" },
-              data: ref.map((r) => ({
+              data: [
+                ...(hasNeg ? [{ xAxis: 0, lineStyle: { color: t.axis }, label: { show: false } }] : []),
+                ...ref.map((r) => ({
                 xAxis: r.value,
                 label: {
                   formatter: r.label,
-                  position: r.position === "start" ? "insideStartTop" : "end",
+                  position: (r.position === "start" ? "insideStartTop" : "end") as "insideStartTop" | "end",
                   color: t.textSecondary,
                   fontSize: 11,
                   fontFamily: FONT,
                 },
               })),
+              ],
             }
           : undefined,
       },

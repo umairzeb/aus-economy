@@ -9,6 +9,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      check_only:
+        description: "Only test the data sources (no commit, no deploy). Runs the code on the chosen branch."
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ inputs.check_only && github.ref_name || 'main' }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -41,6 +46,7 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.build
       - name: Commit updated data
+        if: ${{ !inputs.check_only }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -54,7 +60,7 @@ jobs:
 
   deploy:
     needs: refresh
-    if: ${{ !cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
+    if: ${{ !cancelled() && !inputs.check_only && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -79,12 +85,13 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@v5
 
-  # Fails (and GitHub emails you) when a data source broke, after the site has still been published.
+  # Fails (and GitHub emails you) when data is wrong or a source has been down for over
+  # two weeks (see STALE_DAYS in pipeline/build.py). The site has still been published.
   report:
     needs: [refresh, deploy]
     if: ${{ !cancelled() && needs.refresh.outputs.pipeline == 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::error::One or more data sources failed or looked wrong. See the 'Fetch latest official data' step in the refresh job."
+          echo "::error::Data looked wrong, or a source has been down for over two weeks. See the 'Fetch latest official data' step in the refresh job."
           exit 1

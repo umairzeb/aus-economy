@@ -207,12 +207,11 @@ export function YouSection({ data }: { data: Data }) {
   const wage = S.wpi_yoy ? last(S.wpi_yoy)[1] : undefined;
   const cpi = S.cpi_yoy ? last(S.cpi_yoy)[1] : undefined;
   const houses = B.dwelling_price_by_state;
-  const ads = B.job_ads_by_occupation;
+  const jobs = B.job_vacancies_by_industry;
 
   const fasterThanWages = cpiB && wage !== undefined ? cpiB.items.filter((i) => i.value > wage) : [];
-  const adsBig = ads ? ads.items.filter((i) => i.value >= 2000 && i.change_pct != null) : [];
-  const risers = [...adsBig].sort((a, b) => b.change_pct! - a.change_pct!).slice(0, 6);
-  const fallers = [...adsBig].sort((a, b) => a.change_pct! - b.change_pct!).slice(0, 6).reverse();
+  // Industries with 5,000+ vacancies, sorted by change; small ones swing too much to read.
+  const jobsBig = jobs ? jobs.items.filter((i) => i.value >= 5 && i.change_pct != null).sort((a, b) => b.change_pct! - a.change_pct!) : [];
   const housesSorted = houses ? [...houses.items].sort((a, b) => (b.change ?? 0) - (a.change ?? 0)) : [];
 
   return (
@@ -247,14 +246,14 @@ export function YouSection({ data }: { data: Data }) {
             valueFormat={(v) => `$${fmt(v, 0)}k`} sources={[houses.source]} asOf={periodLabel(houses.as_of, "Q")}
             table={{ head: ["State", "Mean price ($'000)", "Change on a year ago"], rows: houses.items.map((i) => [i.label, fmt(i.value, 0), signed(i.change ?? 0, 1, "%")]), num: [1, 2] }} />
         )}
-        {ads && (
-          <BarCard title="Where the jobs are" subtitle="Change in online job ads over the year, occupations with 2,000+ ads a month"
-            takeaway={risers.length ? `Growing fastest: ${risers.slice(0, 2).map((i) => lc(i.label)).join(" and ")}. Shrinking most: ${fallers.at(-1)?.label && lc(fallers.at(-1)!.label)}.` : undefined}
-            items={[...risers, ...fallers].map((i) => ({ label: i.label, value: i.change_pct!, color: i.change_pct! >= 0 ? t.divPos : t.divNeg, extra: `${fmt(i.value, 0)} ads a month` }))}
+        {jobs && (
+          <BarCard title="Where the jobs are" subtitle="Change in job vacancies over the year, industries with 5,000+ vacancies"
+            takeaway={jobsBig.length ? `Most growth in ${jobsBig.slice(0, 2).map((i) => lc(i.label)).join(" and ")}; the biggest drop in ${lc(jobsBig.at(-1)!.label)}. ${fmt(jobs.items.reduce((a, i) => a + i.value, 0), 0)},000 job vacancies in total.` : undefined}
+            items={jobsBig.map((i) => ({ label: i.label, value: i.change_pct!, color: i.change_pct! >= 0 ? t.divPos : t.divNeg, extra: `${fmt(i.value, 1)}k vacancies` }))}
             valueFormat={(v) => signed(v, 0, "%")}
-            legend={[{ label: "More ads than a year ago", color: t.divPos, kind: "rect" }, { label: "Fewer ads", color: t.divNeg, kind: "rect" }]}
-            sources={[ads.source]} asOf={periodLabel(ads.as_of)}
-            table={{ head: ["Occupation", "Ads a month", "Change on a year ago"], rows: ads.items.map((i) => [i.label, fmt(i.value, 0), signed(i.change_pct ?? 0, 1, "%")]), num: [1, 2] }} />
+            legend={[{ label: "More vacancies than a year ago", color: t.divPos, kind: "rect" }, { label: "Fewer", color: t.divNeg, kind: "rect" }]}
+            sources={[jobs.source]} asOf={periodLabel(jobs.as_of, "Q")}
+            table={{ head: ["Industry", "Vacancies ('000)", "Change on a year ago"], rows: jobs.items.map((i) => [i.label, fmt(i.value, 1), signed(i.change_pct ?? 0, 1, "%")]), num: [1, 2] }} />
         )}
       </div>
     </Section>
