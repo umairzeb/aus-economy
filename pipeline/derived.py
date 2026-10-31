@@ -8,12 +8,11 @@ from __future__ import annotations
 from . import transforms as t
 from .registry import ABS_FLOWS, CPI_COMPONENTS
 from .sources import abs as abs_
-from .sources import budget, jsa
+from .sources import budget
 
 ABS = "Australian Bureau of Statistics"
 RBA = "Reserve Bank of Australia"
 BUDGET = "Australian Government Budget (Budget Paper No. 1)"
-JSA = "Jobs and Skills Australia"
 
 
 def abs_src(flow: str, key: str) -> dict:
@@ -132,17 +131,3 @@ def budget_history() -> list[dict]:
                               "Treasury estimates, not actuals."))
     return out
 
-
-def job_ads() -> list[dict]:
-    d = jsa.ivi()
-    f = d["frame"]
-    months = [c for c in f.columns if c[:2] == "20"]
-    src = {"name": JSA, "dataset": "Internet Vacancy Index (trend)", "url": d["url"]}
-    out = []
-    for _, row in f[f["level"].isin([1, 2])].iterrows():
-        slug = "total" if row["level"] == 1 else row["title"].lower().replace(" ", "_").replace(",", "")
-        out.append(dict(id=f"job_ads_{slug}", title=f"Online job ads - {row['title'].title()}", unit="ads",
-                        section="jobs", freq="M", hidden=row["level"] != 1,
-                        points=[[m, round(float(row[m]))] for m in months if row[m] == row[m]],
-                        source=src))
-    return out

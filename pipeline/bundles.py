@@ -8,10 +8,10 @@ from datetime import date
 
 import pandas as pd
 
-from .derived import BUDGET, JSA, abs_src
+from .derived import BUDGET, abs_src
 from .registry import CPI_COMPONENTS, STATES
 from .sources import abs as abs_
-from .sources import budget, jsa
+from .sources import budget
 
 STATE_CODES = "+".join(STATES)
 
@@ -170,20 +170,21 @@ def states() -> list[dict]:
     ]
 
 
-def job_ads_by_occupation() -> dict:
-    d = jsa.ivi()
-    f = d["frame"]
-    months = [c for c in f.columns if c[:2] == "20"]
-    cur, ago = months[-1], months[-13]
-    sub = f[f["level"] == 3]
-    items = [dict(key=r["code"], label=r["title"], value=round(float(r[cur])),
-                  change_pct=round((r[cur] / r[ago] - 1) * 100, 1) if r[ago] else None)
-             for _, r in sub.iterrows()]
+def job_vacancies_by_industry() -> dict:
+    """ABS Job Vacancies by industry. Original series, so compare with the same
+    quarter a year earlier. (Replaces the JSA job-ads data, which blocks cloud servers.)"""
+    key = f"M1.7.{'+'.join(INDUSTRIES)}.10.AUS.Q"
+    df = abs_.fetch("JV", key, start=_start(36))
+    df["v"] = abs_.scale(df, 3)
+    dates = sorted(df["date"].unique())
+    cur, ago = dates[-1], dates[-5]
+    p = df.pivot_table(index="INDUSTRY", columns="date", values="v")
+    items = [dict(key=k, label=INDUSTRIES.get(k, k), value=round(float(p.at[k, cur]), 1),
+                  change_pct=round((p.at[k, cur] / p.at[k, ago] - 1) * 100, 1) if p.at[k, ago] else None)
+             for k in p.index if p.at[k, cur] == p.at[k, cur]]
     items.sort(key=lambda x: -x["value"])
-    return dict(id="job_ads_by_occupation", title="Where the job ads are (by occupation)", unit="ads per month",
-                section="jobs", as_of=cur, change_unit="% vs a year ago", items=items,
-                source={"name": JSA, "dataset": "Internet Vacancy Index, ANZSCO sub-major groups (trend)",
-                        "url": d["url"]},
-                notes="Online job ads on SEEK, CareerOne and Workforce Australia, sorted by number of ads. "
-                      "Growth rates for small groups (under ~1,000 ads) are noisy.")
-
+    return dict(id="job_vacancies_by_industry", title="Where the jobs are (vacancies by industry)",
+                unit="'000 vacancies", section="jobs", as_of=cur, change_unit="% vs a year ago", items=items,
+                source=abs_src("JV", key),
+                notes="ABS Job Vacancies survey of employers, quarterly (survey month is February, May, August "
+                      "or November). Changes for small industries (under ~5,000 vacancies) are noisy.")

@@ -172,6 +172,5 @@ function shortSource(name: string): string {
   if (name.startsWith("Australian Bureau")) return "ABS";
   if (name.startsWith("Reserve Bank")) return "RBA";
   if (name.startsWith("Australian Government Budget")) return "Budget";
-  if (name.startsWith("Jobs and Skills")) return "JSA";
   return name;
 }

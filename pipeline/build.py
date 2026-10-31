@@ -32,7 +32,7 @@ SANITY = {
     "gdp_real": (4e5, 1.5e6), "gdp_per_capita_real": (15000, 40000), "population": (2.5e7, 3.3e7),
     "exports_goods": (2e4, 1e5), "imports_goods": (2e4, 1e5), "dwelling_mean_price": (500, 2000),
     "mortgage_rate_variable": (3, 15), "aud_usd": (0.4, 1.2), "bond_10y": (0, 10),
-    "household_debt_to_income": (100, 250), "job_vacancies": (100, 600), "job_ads_total": (5e4, 4e5),
+    "household_debt_to_income": (100, 250), "job_vacancies": (100, 600),
     "dwelling_approvals_12m": (1e5, 3e5), "nom_annual": (-1e5, 7e5),
 }
 
@@ -103,7 +103,7 @@ def main() -> int:
 
     print("Derived series")
     for builder in (derived.cpi_monthly, derived.cpi_quarterly, derived.cpi_components,
-                    derived.budget_history, derived.job_ads):
+                    derived.budget_history):
         try:
             for s in builder():
                 keep(s)
@@ -128,7 +128,7 @@ def main() -> int:
     print("Bundles")
     bundle_list = []
     for builder in (bundles.exports_by_country, bundles.exports_by_commodity, bundles.gdp_by_industry,
-                    bundles.revenue_mix, bundles.spending_by_function, bundles.job_ads_by_occupation,
+                    bundles.revenue_mix, bundles.spending_by_function, bundles.job_vacancies_by_industry,
                     lambda: bundles.cpi_breakdown(lambda sid: built.get(sid, {}).get("points")),
                     bundles.states):
         try:

@@ -1,6 +1,6 @@
 # aus-economy
 
-A plain-English dashboard of the Australian economy: how the country makes money, how it spends it, how things are going, and what it means for everyday decisions. All data comes from official sources (ABS, RBA, Treasury/Finance, Jobs and Skills Australia).
+A plain-English dashboard of the Australian economy: how the country makes money, how it spends it, how things are going, and what it means for everyday decisions. All data comes from official sources (ABS, RBA, Treasury/Finance).
 
 ## Status
 
@@ -53,7 +53,7 @@ A failed source never blocks the others: its last good files stay in place and a
 
 Code layout:
 
-- `pipeline/sources/`: one module per publisher (`abs`, `rba`, `budget`, `jsa`)
+- `pipeline/sources/`: one module per publisher (`abs`, `rba`, `budget`)
 - `pipeline/registry.py`: directly-sourced series (add a series here)
 - `pipeline/derived.py`: computed series (growth rates, real wages, spliced CPI)
 - `pipeline/bundles.py`: cross-sections
