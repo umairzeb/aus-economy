@@ -4,6 +4,7 @@ the budget goes, unemployment by state). Each returns
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import pandas as pd
@@ -111,6 +112,12 @@ def revenue_mix() -> dict:
     parts += [("other_tax", "Other taxes", other_tax), ("non_tax", "Non-tax receipts", r["Non-taxation receipts"])]
     total = r["Total receipts"]
     items = [dict(key=k, label=lbl, value=round(v / 1000, 1), share=round(v / total * 100, 1)) for k, lbl, v in parts]
+    # Table 5.7 splits excise and customs by product; refunds are netted off the total.
+    excise_rows = ["Petrol", "Diesel", "Other fuel products", "Tobacco", "Beer", "Spirits",
+                   "Other alcoholic beverages(a)", "Other customs duty(b)", "less: Refunds and drawbacks"]
+    next(i for i in items if i["key"] == "excise")["parts"] = [dict(label=re.sub(r"\(\w\)$", "", k).replace("less: ", "Less: "),
+                              value=round((-1 if k.startswith("less") else 1) * r[k] / 1000, 1))
+                         for k in excise_rows if k in r]
     return dict(id="revenue_mix", title=f"Where the government's money comes from ({year} Budget estimate)",
                 unit="$bn", section="budget", as_of=year, total=round(total / 1000, 1), items=items,
                 source={"name": BUDGET, "dataset": f"Budget {year}, Table 5.7", "url": b["dataset_url"]})
@@ -123,6 +130,12 @@ def spending_by_function() -> dict:
     total = r.pop("Total expenses")
     items = [dict(key=k.lower().replace(" ", "_").replace(",", ""), label=k, value=round(v / 1000, 1),
                   share=round(v / total * 100, 1)) for k, v in sorted(r.items(), key=lambda kv: -kv[1])]
+    # Budget Paper 1 (Statement 6) names the sub-functions; the data files carry no split by amount.
+    for i in items:
+        if i["key"] == "other_purposes":
+            i["description"] = ("GST and other general payments to the states and territories, interest on "
+                                "government debt, interest on public-sector super, natural disaster relief, "
+                                "and the contingency reserve.")
     return dict(id="spending_by_function", title=f"Where the government's money goes ({year} Budget estimate)",
                 unit="$bn", section="budget", as_of=year, total=round(total / 1000, 1), items=items,
                 source={"name": BUDGET, "dataset": f"Budget {year}, Table 6.3", "url": b["dataset_url"]},

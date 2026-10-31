@@ -54,7 +54,7 @@ export function GoingSection({ data }: { data: Data }) {
   const S = data.series;
   return (
     <Section id="going" title="How are things going?"
-      lede="The four numbers that shape everyday life: prices, jobs, pay and growth.">
+      lede="The numbers that shape everyday life: prices, jobs, pay and growth, and how much money and borrowing is flowing through the economy.">
       <div className="grid-2">
         {S.cpi_yoy && S.trimmed_mean_yoy && S.cpi_yoy_q && S.trimmed_mean_yoy_q && (
           // Monthly CPI only goes back to 2018, so longer ranges use the quarterly series (from 1949).
@@ -85,6 +85,41 @@ export function GoingSection({ data }: { data: Data }) {
             takeaway="When growth per person lags total growth, the economy is getting bigger mainly because there are more people."
             lines={[{ s: S.gdp_growth_yoy, name: "Whole economy", color: t.s1 }, { s: S.gdp_per_capita_growth_yoy, name: "Per person", color: t.s2 }]}
             yFormat={(v) => pct(v)} zeroLine />
+        )}
+        {S.money_m1_growth && S.money_m3_growth && (
+          <LineCard anchor="chart-money-supply" title="Money supply" subtitle="Annual change in the amount of money in the economy, monthly"
+            takeaway={`There is ${pct(last(S.money_m3_growth)[1])} more money in the economy (M3) than a year ago. Money in everyday accounts (M1) is ${signed(last(S.money_m1_growth)[1], 1, "%")}.`}
+            lines={[{ s: S.money_m1_growth, name: "M1 (spending money)", color: t.s1 }, { s: S.money_m3_growth, name: "M3 (incl. savings)", color: t.s2 }]}
+            yFormat={(v) => pct(v)} zeroLine
+            glossary={{
+              title: "What do M1, M3 and broad money mean?",
+              terms: [
+                { term: "M1", text: "Notes and coins held by the public, plus money in everyday bank accounts. Money that is ready to spend." },
+                { term: "M3", text: "M1 plus savings accounts, term deposits and certificates of deposit issued by banks. Money people can get to fairly easily." },
+                { term: "Broad money", text: "M3 plus money lent to non-bank lenders by the public. It moves almost exactly with M3, so it isn't drawn." },
+                { term: "Why no M2?", text: "The RBA doesn't publish an M2. Australia's official measures are M1, M3 and broad money." },
+                { term: "Why it matters", text: "Most new money is created when banks lend. Money growing much faster than the economy can add to inflation; slow growth means conditions are tight." },
+              ],
+            }} />
+        )}
+        {S.credit_housing_growth && S.credit_business_growth && S.credit_personal_growth && (
+          <LineCard anchor="chart-credit" title="How fast borrowing is growing" subtitle="Annual change in what's owed to lenders, monthly"
+            takeaway={`Business debt is up ${pct(last(S.credit_business_growth)[1])} on a year ago, housing debt ${pct(last(S.credit_housing_growth)[1])} and personal debt ${pct(last(S.credit_personal_growth)[1])}.`}
+            lines={[
+              { s: S.credit_housing_growth, name: "Housing", color: t.s1 },
+              { s: S.credit_business_growth, name: "Business", color: t.s2 },
+              { s: S.credit_personal_growth, name: "Personal", color: t.s3 },
+            ]}
+            yFormat={(v) => pct(v)} zeroLine
+            glossary={{
+              title: "What counts as each type?",
+              terms: [
+                { term: "Housing", text: "Home loans to owner-occupiers and investors." },
+                { term: "Business", text: "Loans to businesses outside the finance industry. This series starts in 2004." },
+                { term: "Personal", text: "Car loans, credit cards and other personal loans." },
+                { term: "Credit growth", text: "How much more is owed to banks and other lenders than a year earlier. It shows whether people and firms are borrowing more or paying debt down." },
+              ],
+            }} />
         )}
       </div>
     </Section>
@@ -172,14 +207,19 @@ export function BudgetSection({ data }: { data: Data }) {
         {rev && (
           <BarCard title="Where the money comes from" subtitle={`Federal receipts by source, $bn (${rev.as_of} estimate, total ${billions(rev.total ?? 0, 0)})`}
             takeaway={`Nearly half (${fmt(rev.items[0].share ?? 0, 0)}%) comes from income tax paid by individuals. Companies pay ${fmt(rev.items[1].share ?? 0, 0)}%.`}
-            items={[...rev.items].sort((a, b) => b.value - a.value).map((i) => ({ label: i.label, value: i.value, color: t.s1, extra: `${pct(i.share ?? 0)} of receipts` }))}
+            items={[...rev.items].sort((a, b) => b.value - a.value).map((i) => ({ label: i.label, value: i.value, color: t.s1, extra: `${pct(i.share ?? 0)} of receipts`, details: i.parts?.map((p) => `${p.label}: ${p.value < 0 ? "−" : ""}$${fmt(Math.abs(p.value))}bn`) }))}
             valueFormat={(v) => `$${fmt(v, 0)}bn`} sources={[rev.source]}
-            table={{ head: ["Source", "$bn", "Share"], rows: rev.items.map((i) => [i.label, fmt(i.value), pct(i.share ?? 0)]), num: [1, 2] }} />
+            table={{ head: ["Source", "$bn", "Share"], rows: rev.items.flatMap((i) => [[i.label, fmt(i.value), pct(i.share ?? 0)], ...(i.parts ?? []).map((p) => [`  · ${p.label}`, fmt(p.value), ""])]), num: [1, 2] }} />
         )}
         {exp && (
           <BarCard title="Where the money goes" subtitle={`Federal spending by purpose, $bn (${exp.as_of} estimate, total ${billions(exp.total ?? 0, 0)})`}
             takeaway={`Welfare is the biggest item at ${fmt(exp.items[0].share ?? 0, 0)}%. "Other purposes" is mostly GST passed to the states and interest on debt.`}
-            items={topWithOther(exp, 8, "Everything else").map((i) => ({ label: i.label, value: i.value, color: i.key === "other" ? t.axisMuted : t.s1, extra: `${pct(i.share ?? 0)} of spending` }))}
+            items={topWithOther(exp, 8, "Everything else").map((i) => ({
+              label: i.label, value: i.value, color: i.key === "other" ? t.axisMuted : t.s1, extra: `${pct(i.share ?? 0)} of spending`,
+              details: i.key === "other"
+                ? exp.items.slice(8).map((r) => `${r.label}: $${fmt(r.value)}bn`)
+                : "description" in i && i.description ? [`Includes ${i.description}`] : undefined,
+            }))}
             valueFormat={(v) => `$${fmt(v, 0)}bn`} sources={[exp.source]}
             table={{ head: ["Purpose", "$bn", "Share"], rows: exp.items.map((i) => [i.label, fmt(i.value), pct(i.share ?? 0)]), num: [1, 2] }} />
         )}

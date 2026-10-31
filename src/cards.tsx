@@ -32,6 +32,7 @@ interface LineCardProps {
   /** Mark major economic events (default on). */
   events?: boolean;
   height?: number;
+  glossary?: { title: string; terms: { term: string; text: string }[] };
 }
 
 export function LineCard(p: LineCardProps) {
@@ -83,7 +84,7 @@ export function LineCard(p: LineCardProps) {
   const latest = (s0.forecast_from ? s0.points.filter(([d]) => d < s0.forecast_from!) : s0.points).at(-1)![0];
   return (
     <ChartCard anchor={p.anchor} title={p.title} subtitle={subtitle} takeaway={p.takeaway} legend={legend}
-      sources={lines.map((l) => l.s.source)} asOf={`latest ${s0.forecast_from ? "actual " : ""}${periodLabel(latest, freq)}`} table={table}>
+      sources={lines.map((l) => l.s.source)} asOf={`latest ${s0.forecast_from ? "actual " : ""}${periodLabel(latest, freq)}`} table={table} glossary={p.glossary}>
       <EChart option={option} height={p.height ?? 260} label={`${p.title}. Line chart; use Show table for values.`} />
     </ChartCard>
   );

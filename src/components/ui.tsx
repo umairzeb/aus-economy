@@ -135,10 +135,12 @@ interface CardProps {
   sources: Source[];
   asOf?: string;
   table: TableData;
+  /** Plain-English definitions, opened with a tap under the chart. */
+  glossary?: { title: string; terms: { term: string; text: string }[] };
   children: ReactNode;
 }
 
-export function ChartCard({ anchor, title, subtitle, takeaway, legend, sources, asOf, table, children }: CardProps) {
+export function ChartCard({ anchor, title, subtitle, takeaway, legend, sources, asOf, table, glossary, children }: CardProps) {
   const [showTable, setShowTable] = useState(false);
   const id = useId();
   const uniq = sources.filter((s, i) => sources.findIndex((x) => x.name === s.name && x.dataset === s.dataset) === i);
@@ -149,6 +151,16 @@ export function ChartCard({ anchor, title, subtitle, takeaway, legend, sources, 
       {takeaway && <p className="takeaway">{takeaway}</p>}
       {legend && legend.length > 1 && !showTable && <Legend items={legend} />}
       <div className="chart-wrap">{showTable ? <DataTable {...table} /> : children}</div>
+      {glossary && (
+        <details className="glossary">
+          <summary>{glossary.title}</summary>
+          <dl>
+            {glossary.terms.map((g) => (
+              <div key={g.term}><dt>{g.term}</dt><dd>{g.text}</dd></div>
+            ))}
+          </dl>
+        </details>
+      )}
       <footer>
         <span>
           Source:{" "}

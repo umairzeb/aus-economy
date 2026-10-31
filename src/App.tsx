@@ -15,6 +15,7 @@ const SERIES = [
   "exports_education_4q", "terms_of_trade", "budget_balance_pct_gdp", "net_debt_pct_gdp",
   "business_rate_small", "business_rate_medium", "business_rate_large", "insolvencies_12m",
   "lending_small_business_12m", "lending_medium_business_12m", "job_postings_indeed",
+  "money_m1_growth", "money_m3_growth", "credit_housing_growth", "credit_business_growth", "credit_personal_growth",
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
