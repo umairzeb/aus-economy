@@ -1,6 +1,6 @@
 # aus-economy
 
-A plain-English dashboard of the Australian economy: how the country makes money, how it spends it, how things are going, and what it means for everyday decisions. All data comes from official sources (ABS, RBA, Treasury/Finance).
+A plain-English dashboard of the Australian economy: how the country makes money, how it spends it, how things are going, and what it means for everyday decisions. Data comes from official sources (ABS, RBA, Treasury/Finance, ASIC), plus job-ad trends from Indeed Hiring Lab.
 
 ## Status
 
@@ -27,7 +27,8 @@ npm run build    # static site in dist/
 ```
 
 - `src/App.tsx`: page layout, summary and stat tiles
-- `src/sections.tsx`: the four question sections
+- `src/sections.tsx`: the question sections
+- `src/businessSection.tsx`: the "For business" section
 - `src/insights.ts`: rules that turn numbers into plain-English readings (descriptive only, never advice)
 - `src/charts.ts`, `src/cards.tsx`: chart builders and chart cards (each card has a table view)
 - `src/TopBar.tsx`: sticky section links and chart range
@@ -53,8 +54,9 @@ A failed source never blocks the others: its last good files stay in place and a
 
 Code layout:
 
-- `pipeline/sources/`: one module per publisher (`abs`, `rba`, `budget`)
+- `pipeline/sources/`: one module per publisher (`abs`, `abs_files`, `rba`, `budget`, `asic`, `indeed`)
 - `pipeline/registry.py`: directly-sourced series (add a series here)
 - `pipeline/derived.py`: computed series (growth rates, real wages, spliced CPI)
 - `pipeline/bundles.py`: cross-sections
+- `pipeline/business.py`: business section series and bundles
 - `docs/data-sources.md`: source quirks and caveats

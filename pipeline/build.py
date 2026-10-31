@@ -14,7 +14,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import bundles, derived
+from . import bundles, business, derived
 from .registry import ABS_FLOWS, RBA_TABLES, SERIES
 from .sources import abs as abs_
 from .sources import rba
@@ -34,6 +34,8 @@ SANITY = {
     "mortgage_rate_variable": (3, 15), "aud_usd": (0.4, 1.2), "bond_10y": (0, 10),
     "household_debt_to_income": (100, 250), "job_vacancies": (100, 600),
     "dwelling_approvals_12m": (1e5, 3e5), "nom_annual": (-1e5, 7e5),
+    "business_rate_small": (2, 20), "business_rate_large": (1, 15), "insolvencies_12m": (2000, 40000),
+    "job_postings_indeed": (30, 300),
 }
 
 
@@ -103,7 +105,7 @@ def main() -> int:
 
     print("Derived series")
     for builder in (derived.cpi_monthly, derived.cpi_quarterly, derived.cpi_components,
-                    derived.budget_history):
+                    derived.budget_history, business.series):
         try:
             for s in builder():
                 keep(s)
@@ -116,7 +118,8 @@ def main() -> int:
         return built[sid]["points"]
 
     try:
-        others = derived.from_others(lambda sid: got(sid) if sid in built else [])
+        lookup = lambda sid: got(sid) if sid in built else []  # noqa: E731
+        others = derived.from_others(lookup) + business.from_others(lookup)
         for s in others:
             if s["points"]:
                 keep(s)
@@ -129,6 +132,7 @@ def main() -> int:
     bundle_list = []
     for builder in (bundles.exports_by_country, bundles.exports_by_commodity, bundles.gdp_by_industry,
                     bundles.revenue_mix, bundles.spending_by_function, bundles.job_vacancies_by_industry,
+                    business.business_counts_by_size, business.job_postings_by_category,
                     lambda: bundles.cpi_breakdown(lambda sid: built.get(sid, {}).get("points")),
                     bundles.states):
         try:

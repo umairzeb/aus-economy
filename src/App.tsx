@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { loadData, type Data } from "./data";
 import { buildSummary, buildTiles } from "./insights";
 import { BudgetSection, EarnSection, GoingSection, YouSection } from "./sections";
+import { BusinessSection } from "./businessSection";
 import { StatTile } from "./components/ui";
 import { RangeContext, useRangeState } from "./range";
 import { TopBar } from "./TopBar";
@@ -12,10 +13,13 @@ const SERIES = [
   "real_wage_growth", "gdp_growth_yoy", "gdp_per_capita_growth_yoy", "cash_rate", "mortgage_rate_discounted",
   "population_growth_yoy", "nom_annual", "natural_increase_annual", "aud_usd", "trade_balance_12m",
   "exports_education_4q", "terms_of_trade", "budget_balance_pct_gdp", "net_debt_pct_gdp",
+  "business_rate_small", "business_rate_medium", "business_rate_large", "insolvencies_12m",
+  "lending_small_business_12m", "lending_medium_business_12m", "job_postings_indeed",
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
-  "cpi_breakdown", "dwelling_price_by_state", "job_vacancies_by_industry",
+  "cpi_breakdown", "dwelling_price_by_state", "job_vacancies_by_industry", "business_counts_by_size",
+  "job_postings_by_category",
 ];
 
 const NEXT_THEME: Record<ThemePref, ThemePref> = { auto: "light", light: "dark", dark: "auto" };
@@ -75,12 +79,13 @@ export default function App() {
               <EarnSection data={data} />
               <BudgetSection data={data} />
               <YouSection data={data} />
+              <BusinessSection data={data} />
             </RangeContext.Provider>
           </main>
         )}
 
         <footer className="site-footer">
-          <p>Sources: Australian Bureau of Statistics, Reserve Bank of Australia and Australian Government Budget Paper No. 1 (data.gov.au). ABS and Budget data are used under CC BY 4.0.</p>
+          <p>Sources: Australian Bureau of Statistics, Reserve Bank of Australia, Australian Government Budget Paper No. 1 (data.gov.au) and ASIC. Job-ad trends come from Indeed Hiring Lab, a private job site, not an official statistic. ABS, Budget and Indeed data are used under CC BY 4.0.</p>
           <p>This site describes official statistics. It is not financial advice.</p>
         </footer>
       </div>

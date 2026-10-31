@@ -8,6 +8,7 @@ export const SECTIONS = [
   { id: "earn", label: "How we earn" },
   { id: "budget", label: "Government money" },
   { id: "you", label: "What it means for me" },
+  { id: "business", label: "For business" },
 ];
 
 export function TopBar({ range, onRange }: { range: Range; onRange: (r: Range) => void }) {

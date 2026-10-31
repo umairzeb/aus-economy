@@ -7,6 +7,9 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 | ABS Data API (`data.api.abs.gov.au`) | SDMX REST, CSV output | Monthly / quarterly per release | CPI, jobs, wages, GDP, trade, housing, population, spending |
 | RBA statistical tables (`rba.gov.au/statistics/tables/csv/`) | CSV files | Daily to quarterly | Cash rate, mortgage rates, bond yields, AUD, household debt |
 | Budget Paper No. 1 tables (data.gov.au, Dept of Finance) | ZIP of CSVs via CKAN API | Yearly (May Budget) | Revenue by tax, spending by function, deficit and debt history |
+| ABS data cubes (abs.gov.au) | Excel, link found on the "latest-release" page | Yearly | Businesses opening and closing by size (Counts of Australian Businesses, 8165.0 Table 13) |
+| ASIC insolvency statistics | Excel, link found on the statistics page | Monthly | Companies entering administration (Series 1) |
+| Indeed Hiring Lab job postings tracker (GitHub, CC BY 4.0) | CSV | Daily | Job-ad trends, overall and by job type. Not an official statistic |
 
 ## ABS
 
@@ -40,6 +43,14 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - The "Where the jobs are" chart uses ABS Job Vacancies by industry (`JV`, original series, compared with the same quarter a year earlier). It is quarterly; the survey month is February, May, August or November.
 - It used to use the Jobs and Skills Australia Internet Vacancy Index (online job ads by occupation, monthly). jobsandskills.gov.au stalls requests from cloud servers such as GitHub Actions, even with retries and normal browser headers, while the same files download instantly from a home connection. The daily refresh failed every day, so the source was dropped (Oct 2026). Bringing it back would need the data fetched from a home connection.
 
+## Business
+
+- RBA F7 has interest rates on new and outstanding business loans by size (small, medium, large), monthly from July 2019. The older F5 small/large business indicator rates are mostly discontinued.
+- ABS `LEND_BUSINESS` splits new loan commitments by size for small and medium businesses only (quarterly, original). Large-business and total figures aren't published by size, so the dashboard shows rolling 12-month totals for small and medium.
+- Counts of Australian Businesses is not in the Data API. The pipeline finds `8165DC01.xlsx` on the latest-release page and reads Table 13 (employment size ranges: operating, entries, exits, entry and exit rates by financial year).
+- ASIC's Series 1 workbook is about 17 MB. Table "1" lays months down the rows and financial years across the columns; the pipeline turns it into a monthly series and a rolling 12-month total.
+- Indeed's index is 1 Feb 2020 = 100. The overall series is seasonally adjusted and kept weekly; the by-category file is not seasonally adjusted, so it is compared with the same date a year earlier.
+
 ## Not yet covered (candidates for later steps)
 
 - RBA forecasts (Statement on Monetary Policy): published as HTML tables, not CSV.
@@ -50,4 +61,4 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 
 ## Licensing (check before public launch)
 
-ABS and data.gov.au budget data are CC BY 4.0 and need attribution. RBA content is reusable with attribution under their copyright pages. Confirm the exact terms and attribution wording before the site goes public.
+ABS, data.gov.au budget data and Indeed Hiring Lab data are CC BY 4.0 and need attribution. ASIC statistics are reusable with attribution. RBA content is reusable with attribution under their copyright pages. Confirm the exact terms and attribution wording before the site goes public.

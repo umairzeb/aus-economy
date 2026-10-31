@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart } from "echarts/charts";
 import { GridComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
+import { LabelLayout } from "echarts/features";
 import { SVGRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
 
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, MarkAreaComponent, MarkLineComponent, SVGRenderer]);
+echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, MarkAreaComponent, MarkLineComponent, LabelLayout, SVGRenderer]);
 
 interface Props {
   /** Built from the container width so labels and spacing adapt to phones. */

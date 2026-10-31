@@ -23,6 +23,7 @@ ABS_FLOWS = {
     "MERCH_EXP": "Merchandise Exports by commodity and country",
     "RES_DWELL_ST": "Total Value of Dwellings",
     "LEND_HOUSING": "Lending Indicators: housing finance",
+    "LEND_BUSINESS": "Lending Indicators: business finance",
     "BA_GCCSA": "Building Approvals",
     "ERP_COMP_Q": "National, state and territory population",
     "HSI_M": "Monthly Household Spending Indicator",
@@ -35,6 +36,7 @@ RBA_TABLES = {
     "f5": "F5 Indicator lending rates",
     "f11": "F11 Exchange rates (monthly)",
     "e2": "E2 Household finances, selected ratios",
+    "f7": "F7 Business lending rates",
 }
 
 # Series with `rba_hist` splice a frozen RBA history workbook in front of the
@@ -130,6 +132,22 @@ SERIES = [
     # --- Spending ---
     dict(id="household_spending_yoy", title="Household spending growth", unit="% y/y", section="spending",
          freq="M", abs=("HSI_M", "9.TOT.CUR.20.AUS.M"), notes="Current prices, so includes inflation."),
+
+    # --- Business ---
+    dict(id="business_rate_small", title="Interest rate on new small business loans", unit="%", section="business",
+         freq="M", rba=("f7", "FLRBFNSBT")),
+    dict(id="business_rate_medium", title="Interest rate on new medium business loans", unit="%", section="business",
+         freq="M", rba=("f7", "FLRBFNMBT")),
+    dict(id="business_rate_large", title="Interest rate on new large business loans", unit="%", section="business",
+         freq="M", rba=("f7", "FLRBFNLBT")),
+    # ABS publishes lending by size for small and medium businesses only; original quarterly series.
+    dict(id="lending_small_business_q", title="New loans to small businesses (quarter)", unit="$m", section="business",
+         freq="Q", abs=("LEND_BUSINESS", "FIN_VAL.NEWCOMMITS.DV8270.TOTLOANPURP_EXCLREFIN.TOT.DV8605.10.AUS.Q"),
+         to_mult=6, hidden=True),
+    dict(id="lending_medium_business_q", title="New loans to medium businesses (quarter)", unit="$m",
+         section="business", freq="Q",
+         abs=("LEND_BUSINESS", "FIN_VAL.NEWCOMMITS.DV8270.TOTLOANPURP_EXCLREFIN.TOT.DV8604.10.AUS.Q"),
+         to_mult=6, hidden=True),
 ]
 
 # CPI components: monthly, original, annual % change (CPI MEASURE 3).

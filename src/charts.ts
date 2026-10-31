@@ -58,6 +58,17 @@ export function lineOption(o: LineOpts): EChartsOption {
   const years = all.length ? (Date.parse(all[all.length - 1][0]) - Date.parse(all[0][0])) / 3.15e10 : 0;
   const narrow = o.width < 480;
 
+  const first = all.length ? Date.parse(all.map((p) => p[0]).sort()[0]) : 0;
+  const last = all.length ? Date.parse(all.map((p) => p[0]).sort().at(-1)!) : 1;
+  // Rotated event labels need ~20px each: drop a marker that would sit on top of the previous one.
+  const plotPx = Math.max(o.width - 4 - (o.endLabels ? 48 : 12) - 30, 1);
+  let lastX = -Infinity;
+  const shownEvents = (o.events ?? []).filter((e) => {
+    const x = ((Date.parse(e.date) - first) / (last - first || 1)) * plotPx;
+    if (x - lastX < 20) return false;
+    lastX = x;
+    return true;
+  });
   const out: LineSeriesOption[] = [];
   o.series.forEach((s, i) => {
     const actual = s.forecastFrom ? s.points.filter(([d]) => d < s.forecastFrom!) : s.points;
@@ -79,8 +90,9 @@ export function lineOption(o: LineOpts): EChartsOption {
       id: `${s.name}-actual`,
       data: actual,
       endLabel: o.endLabels && !forecast.length
-        ? { show: true, formatter: (p) => o.yFormat((p.value as Point)[1]), color: t.textSecondary, fontSize: 12, fontFamily: FONT, distance: 6 }
+        ? { show: true, formatter: (p) => o.yFormat((p.value as Point)[1]), color: t.textSecondary, fontSize: 12, fontFamily: FONT, distance: 6, minMargin: 4 }
         : undefined,
+      labelLayout: o.endLabels ? { moveOverlap: "shiftY" } : undefined,
       markArea: i === 0 && o.band
         ? {
             silent: true,
@@ -97,10 +109,11 @@ export function lineOption(o: LineOpts): EChartsOption {
             label: { color: t.textMuted, fontSize: 11, fontFamily: FONT },
             data: [
               ...(o.zeroLine ? [{ yAxis: 0, label: { show: false } }] : []),
-              ...(o.events ?? []).map((e) => ({
+              ...shownEvents.map((e) => ({
                 xAxis: e.date,
                 lineStyle: { color: t.axis, width: 1, type: "solid" as const },
-                label: { show: true, formatter: narrow ? e.short : e.label, position: "insideEndTop" as const, color: t.textMuted },
+                // Near the left edge, put the label on the right of the line so it clears the y-axis numbers.
+                label: { show: true, formatter: narrow ? e.short : e.label, position: "insideEndTop" as const, color: t.textMuted, offset: (Date.parse(e.date) - first) / (last - first) < 0.08 ? [0, 22] : [0, 0] },
               })),
               ...(o.breaks ?? []).map((b) => ({
                 xAxis: b.date,
@@ -117,8 +130,9 @@ export function lineOption(o: LineOpts): EChartsOption {
         data: [actual[actual.length - 1], ...forecast],
         lineStyle: { ...base.lineStyle, type: "dashed" },
         endLabel: o.endLabels
-          ? { show: true, formatter: (p) => o.yFormat((p.value as Point)[1]), color: t.textSecondary, fontSize: 12, fontFamily: FONT, distance: 6 }
+          ? { show: true, formatter: (p) => o.yFormat((p.value as Point)[1]), color: t.textSecondary, fontSize: 12, fontFamily: FONT, distance: 6, minMargin: 4 }
           : undefined,
+        labelLayout: o.endLabels ? { moveOverlap: "shiftY" } : undefined,
       });
     }
   });
@@ -135,6 +149,7 @@ export function lineOption(o: LineOpts): EChartsOption {
       axisLabel: {
         color: t.axisMuted,
         hideOverlap: true,
+        margin: 14,
         formatter: (v: number) => {
           const d = new Date(v);
           return years > 3 ? String(d.getFullYear()) : d.toLocaleDateString("en-AU", { month: "short", year: "2-digit" });
@@ -196,6 +211,7 @@ export function barOption(o: BarOpts): EChartsOption {
   const { t } = o;
   const labelWidth = Math.round(Math.min(210, Math.max(100, o.width * 0.44)));
   const hasNeg = o.items.some((i) => i.value < 0);
+  const plotWidth = Math.max(o.width - labelWidth - 64, 90);
   const data: BarSeriesOption["data"] = o.items.map((i) => ({
     value: i.value,
     name: i.label,
@@ -207,8 +223,8 @@ export function barOption(o: BarOpts): EChartsOption {
     animation: false,
     textStyle: { fontFamily: FONT },
     grid: { left: 4, right: 52, top: ref.length ? 22 : 4, bottom: ref.length ? 18 : 4 },
-    // Extra room left of zero so negative value labels fit before the category names.
-    xAxis: { type: "value", show: false, min: hasNeg ? (e: { min: number; max: number }) => e.min - (Math.max(e.max, 0) - e.min) * 0.2 : 0 },
+    // Extra room left of zero (about 46px) so negative value labels fit before the category names.
+    xAxis: { type: "value", show: false, min: hasNeg ? (e: { min: number; max: number }) => e.min - (46 * (Math.max(e.max, 0) - e.min)) / (plotWidth - 46) : 0 },
     yAxis: {
       type: "category",
       inverse: true,
@@ -260,6 +276,59 @@ export function barOption(o: BarOpts): EChartsOption {
   };
 }
 
+// ---------- Grouped horizontal bars (two measures per category) ----------
+
+export interface GroupedOpts {
+  categories: string[];
+  series: { name: string; values: number[]; color: string }[];
+  t: Tokens;
+  width: number;
+  valueFormat: (v: number) => string;
+}
+
+export const groupedHeight = (n: number) => n * 46 + 16;
+
+export function groupedBarOption(o: GroupedOpts): EChartsOption {
+  const { t } = o;
+  const labelWidth = Math.round(Math.min(160, Math.max(90, o.width * 0.3)));
+  return {
+    animation: false,
+    textStyle: { fontFamily: FONT },
+    grid: { left: 4, right: 52, top: 4, bottom: 4 },
+    xAxis: { type: "value", show: false, min: 0 },
+    yAxis: {
+      type: "category",
+      inverse: true,
+      data: o.categories,
+      axisTick: { show: false },
+      axisLine: { show: true, lineStyle: { color: t.axis } },
+      axisLabel: { color: t.textSecondary, fontSize: 12, width: labelWidth, overflow: "truncate", margin: 8 },
+    },
+    tooltip: {
+      ...tooltipBase(t),
+      trigger: "axis",
+      axisPointer: { type: "shadow", shadowStyle: { color: t.grid, opacity: 0.4 } },
+      formatter: (raw) => {
+        const ps = (Array.isArray(raw) ? raw : [raw]) as unknown as { dataIndex: number; seriesIndex: number }[];
+        const i = ps[0].dataIndex;
+        return `<div class="tt"><div class="tt-head">${escapeHtml(o.categories[i])}</div>${o.series
+          .map((s) => ttRow(s.color, o.valueFormat(s.values[i]), s.name, true)).join("")}</div>`;
+      },
+    },
+    series: o.series.map((s) => ({
+      type: "bar" as const,
+      name: s.name,
+      data: s.values,
+      barMaxWidth: 12,
+      barGap: "25%",
+      barCategoryGap: "30%",
+      itemStyle: { color: s.color, borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: "right" as const, color: t.textSecondary, fontSize: 11, formatter: (p: { value: unknown }) => o.valueFormat(p.value as number), distance: 4 },
+      emphasis: { itemStyle: { opacity: 0.85 } },
+    })),
+  };
+}
+
 // ---------- Column chart for financial years (budget) ----------
 
 export interface ColumnOpts {
@@ -283,7 +352,7 @@ export function columnOption(o: ColumnOpts): EChartsOption {
       data: o.points.map(([d]) => periodLabel(d, "FY")),
       axisTick: { show: false },
       axisLine: { show: false },
-      axisLabel: { color: t.axisMuted, hideOverlap: true, interval: o.width < 480 ? 9 : 4 },
+      axisLabel: { color: t.axisMuted, hideOverlap: true, interval: o.width < 480 ? 9 : 4, margin: 14 },
     },
     yAxis: {
       type: "value",

@@ -1,7 +1,7 @@
-// Reusable chart cards: a line card for time series and a bar card for bundles.
+// Reusable chart cards: line cards for time series, bar cards for bundles.
 import { useCallback, type ReactNode } from "react";
 import { since, type Point, type Series, type Source } from "./data";
-import { barListHeight, barOption, columnOption, lineOption, type BarItem, type RefLine } from "./charts";
+import { barListHeight, barOption, columnOption, groupedBarOption, groupedHeight, lineOption, type BarItem, type RefLine } from "./charts";
 import { EChart } from "./components/EChart";
 import { ChartCard, type LegendEntry } from "./components/ui";
 import { periodLabel } from "./format";
@@ -75,7 +75,8 @@ export function LineCard(p: LineCardProps) {
   const late = [...lines].filter((l) => l.pts.length).sort((a, b) => (a.pts[0][0] < b.pts[0][0] ? 1 : -1))[0];
   const lateYear = late ? Number(late.pts[0][0].slice(0, 4)) : 0;
   const startsLate = range !== "5y" && lateYear > Number(start.slice(0, 4)) + 1;
-  const note = `${lines.length > 1 ? `${late?.name} data` : "Data"} starts ${lateYear}`;
+  const allSameStart = new Set(lines.map((l) => l.pts[0]?.[0].slice(0, 4))).size === 1;
+  const note = `${lines.length > 1 && !allSameStart ? `${late?.name} data` : "Data"} starts ${lateYear}`;
   const subtitle = startsLate ? `${p.subtitle ?? ""}${p.subtitle ? " · " : ""}${note}` : p.subtitle;
 
   const s0 = lines[0].s;
@@ -140,6 +141,34 @@ export function ColumnCard(p: ColumnCardProps) {
       sources={[p.s.source]}
       table={{ head: ["Financial year", p.name, ""], rows: [...pts].reverse().map(([d, v]) => [periodLabel(d, "FY"), p.yFormat(v), isF(d) ? "Forecast" : "Actual"]), num: [1] }}>
       <EChart option={option} height={240} label={`${p.title}. Column chart; use Show table for values.`} />
+    </ChartCard>
+  );
+}
+
+interface GroupedCardProps {
+  anchor?: string;
+  title: string;
+  subtitle?: string;
+  takeaway?: ReactNode;
+  categories: string[];
+  series: { name: string; values: number[]; color: string }[];
+  valueFormat: (v: number) => string;
+  sources: Source[];
+  asOf?: string;
+  table: { head: string[]; rows: (string | number)[][]; num?: number[] };
+}
+
+export function GroupedCard(p: GroupedCardProps) {
+  const t = useTokens();
+  const option = useCallback(
+    (width: number) => groupedBarOption({ categories: p.categories, series: p.series, t, width, valueFormat: p.valueFormat }),
+    [t, p.categories, p.series],
+  );
+  return (
+    <ChartCard anchor={p.anchor} title={p.title} subtitle={p.subtitle} takeaway={p.takeaway}
+      legend={p.series.map((s) => ({ label: s.name, color: s.color, kind: "rect" as const }))}
+      sources={p.sources} asOf={p.asOf} table={p.table}>
+      <EChart option={option} height={groupedHeight(p.categories.length)} label={`${p.title}. Bar chart; use Show table for values.`} />
     </ChartCard>
   );
 }

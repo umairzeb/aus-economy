@@ -32,6 +32,8 @@ export interface BundleItem {
   change_pct?: number | null;
   as_of?: string;
   full_label?: string;
+  entry_rate?: number;
+  exit_rate?: number;
 }
 
 export interface Bundle {
