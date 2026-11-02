@@ -131,6 +131,8 @@ interface CardProps {
   title: string;
   subtitle?: string;
   takeaway?: ReactNode;
+  /** A caution on how to read the chart, under the takeaway. */
+  note?: ReactNode;
   legend?: LegendEntry[];
   sources: Source[];
   asOf?: string;
@@ -140,7 +142,7 @@ interface CardProps {
   children: ReactNode;
 }
 
-export function ChartCard({ anchor, title, subtitle, takeaway, legend, sources, asOf, table, glossary, children }: CardProps) {
+export function ChartCard({ anchor, title, subtitle, takeaway, note, legend, sources, asOf, table, glossary, children }: CardProps) {
   const [showTable, setShowTable] = useState(false);
   const id = useId();
   const uniq = sources.filter((s, i) => sources.findIndex((x) => x.name === s.name && x.dataset === s.dataset) === i);
@@ -149,6 +151,7 @@ export function ChartCard({ anchor, title, subtitle, takeaway, legend, sources, 
       <h3 id={id}>{title}</h3>
       {subtitle && <p className="subtitle">{subtitle}</p>}
       {takeaway && <p className="takeaway">{takeaway}</p>}
+      {note && <p className="note">{note}</p>}
       {legend && legend.length > 1 && !showTable && <Legend items={legend} />}
       <div className="chart-wrap">{showTable ? <DataTable {...table} /> : children}</div>
       {glossary && (

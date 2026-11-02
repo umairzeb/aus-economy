@@ -156,7 +156,7 @@ def cpi_breakdown(got) -> dict:
 
 
 def _by_state(flow: str, key: str, bid: str, title: str, unit: str, section: str, change_lag: int,
-              to_mult: int | None = None, change: str = "pct", nd: int = 1) -> dict:
+              to_mult: int | None = None, change: str = "pct", nd: int = 1, quarter_change: bool = False) -> dict:
     df = abs_.fetch(flow, key, start=_start(36))
     df["v"] = abs_.scale(df, to_mult)
     items = []
@@ -167,6 +167,8 @@ def _by_state(flow: str, key: str, bid: str, title: str, unit: str, section: str
         v, prev = g["v"].iloc[-1], g["v"].iloc[-1 - change_lag] if len(g) > change_lag else None
         ch = None if prev is None else (round((v / prev - 1) * 100, 1) if change == "pct" else round(v - prev, 1))
         items.append(dict(key=abbr, label=abbr, value=round(float(v), nd), change=ch, as_of=g["date"].iloc[-1]))
+        if quarter_change and len(g) > 1:
+            items[-1]["change_q"] = round((v / g["v"].iloc[-2] - 1) * 100, 1)
     return dict(id=bid, title=title, unit=unit, section=section, as_of=max(i["as_of"] for i in items),
                 change_unit="% vs a year ago" if change == "pct" else "pp vs a year ago",
                 items=items, source=abs_src(flow, key))
@@ -179,7 +181,7 @@ def states() -> list[dict]:
         _by_state("ERP_COMP_Q", f"10.{STATE_CODES}.Q", "population_by_state", "Population by state", "people",
                   "population", 4, to_mult=0, nd=0),
         _by_state("RES_DWELL_ST", f"5.{STATE_CODES}.Q", "dwelling_price_by_state", "Mean dwelling price by state",
-                  "$'000", "housing", 4, to_mult=3),
+                  "$'000", "housing", 4, to_mult=3, quarter_change=True),
     ]
 
 

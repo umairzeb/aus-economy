@@ -49,7 +49,7 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 
 ## Housing
 
-- `dwelling_mean_price` (ABS Total Value of Dwellings) is the average value of all homes, not of homes sold. It is quarterly, national and by state only. City and suburb prices and auction results mostly come from private companies, so they aren't included.
+- `dwelling_mean_price` (ABS Total Value of Dwellings) is the average value of all homes, not of homes sold. It is quarterly, national and by state only, and comes out months after the quarter ends, so it can miss a recent turn. The two home price charts say where the data stops and link to Cotality's indices. City and suburb prices, monthly indices and auction results mostly come from private companies, so their numbers aren't included.
 - New home loans (ABS Lending Indicators): the first home buyer series is part of the owner-occupier total, so investor and first home buyer shares are worked out against owner-occupier plus investor lending.
 - Approvals are compared with the National Housing Accord pace of 240,000 homes a year (1.2 million over 5 years from mid-2024). The Accord counts finished homes, and approvals are only plans, so the comparison is a guide. The flat line is drawn across the whole chart for reference, though the Accord only began in mid-2024.
 - CPI rents cover all rents being paid, not just new listings, and the monthly series starts in 2023.
