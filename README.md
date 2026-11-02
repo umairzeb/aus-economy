@@ -29,6 +29,7 @@ npm run build    # static site in dist/
 - `src/App.tsx`: page layout, summary and stat tiles
 - `src/sections.tsx`: the question sections
 - `src/businessSection.tsx`: the "For business" section
+- `src/housingSection.tsx`: the "Housing" section
 - `src/insights.ts`: rules that turn numbers into plain-English readings (descriptive only, never advice)
 - `src/charts.ts`, `src/cards.tsx`: chart builders and chart cards (each card has a table view)
 - `src/TopBar.tsx`: sticky section links and chart range

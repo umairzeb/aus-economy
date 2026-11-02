@@ -54,12 +54,12 @@ export interface LineOpts {
 
 export function lineOption(o: LineOpts): EChartsOption {
   const { t } = o;
-  const all = o.series.flatMap((s) => s.points);
-  const years = all.length ? (Date.parse(all[all.length - 1][0]) - Date.parse(all[0][0])) / 3.15e10 : 0;
+  const dates = o.series.flatMap((s) => s.points.map((p) => p[0])).sort();
+  const first = dates.length ? Date.parse(dates[0]) : 0;
+  const last = dates.length ? Date.parse(dates[dates.length - 1]) : 1;
+  const years = (last - first) / 3.15e10;
   const narrow = o.width < 480;
 
-  const first = all.length ? Date.parse(all.map((p) => p[0]).sort()[0]) : 0;
-  const last = all.length ? Date.parse(all.map((p) => p[0]).sort().at(-1)!) : 1;
   // Rotated event labels need ~20px each: drop a marker that would sit on top of the previous one.
   const plotPx = Math.max(o.width - 4 - (o.endLabels ? 48 : 12) - 30, 1);
   let lastX = -Infinity;

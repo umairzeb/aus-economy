@@ -3,6 +3,7 @@ import { loadData, type Data } from "./data";
 import { buildSummary, buildTiles } from "./insights";
 import { BudgetSection, EarnSection, GoingSection, YouSection } from "./sections";
 import { BusinessSection } from "./businessSection";
+import { HousingSection } from "./housingSection";
 import { StatTile } from "./components/ui";
 import { RangeContext, useRangeState } from "./range";
 import { TopBar } from "./TopBar";
@@ -16,6 +17,8 @@ const SERIES = [
   "business_rate_small", "business_rate_medium", "business_rate_large", "insolvencies_12m",
   "lending_small_business_12m", "lending_medium_business_12m", "job_postings_indeed",
   "money_m1_growth", "money_m3_growth", "credit_housing_growth", "credit_business_growth", "credit_personal_growth",
+  "dwelling_mean_price", "dwelling_approvals_12m", "lending_owner_occupier", "lending_investor", "lending_first_home_buyer",
+  "cpi_rents_yoy", "household_debt_to_income",
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
@@ -79,6 +82,7 @@ export default function App() {
               <GoingSection data={data} />
               <EarnSection data={data} />
               <BudgetSection data={data} />
+              <HousingSection data={data} />
               <YouSection data={data} />
               <BusinessSection data={data} />
             </RangeContext.Provider>

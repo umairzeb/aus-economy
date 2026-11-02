@@ -246,17 +246,15 @@ export function YouSection({ data }: { data: Data }) {
   const cpiB = B.cpi_breakdown;
   const wage = S.wpi_yoy ? last(S.wpi_yoy)[1] : undefined;
   const cpi = S.cpi_yoy ? last(S.cpi_yoy)[1] : undefined;
-  const houses = B.dwelling_price_by_state;
   const jobs = B.job_vacancies_by_industry;
 
   const fasterThanWages = cpiB && wage !== undefined ? cpiB.items.filter((i) => i.value > wage) : [];
   // Industries with 5,000+ vacancies, sorted by change; small ones swing too much to read.
   const jobsBig = jobs ? jobs.items.filter((i) => i.value >= 5 && i.change_pct != null).sort((a, b) => b.change_pct! - a.change_pct!) : [];
-  const housesSorted = houses ? [...houses.items].sort((a, b) => (b.change ?? 0) - (a.change ?? 0)) : [];
 
   return (
     <Section id="you" title="What does it mean for me?"
-      lede="Cost of living, borrowing, housing and jobs. This describes the data; it isn't financial advice.">
+      lede="Cost of living, borrowing and jobs. This describes the data; it isn't financial advice.">
       <div className="grid-2">
         {cpiB && (
           <BarCard title="What's getting more expensive" subtitle="Annual price change by category"
@@ -278,13 +276,6 @@ export function YouSection({ data }: { data: Data }) {
               { s: S.mortgage_rate_discounted, name: "Discounted variable", color: t.s3 },
             ]}
             yFormat={(v) => pct(v, v % 1 === 0 ? 0 : 1)} />
-        )}
-        {houses && (
-          <BarCard title="Home prices by state" subtitle="Mean dwelling price, $'000"
-            takeaway={`Fastest rises over the year: ${housesSorted.slice(0, 2).map((i) => `${i.label} (${signed(i.change ?? 0, 1, "%")})`).join(" and ")}. Slowest: ${housesSorted.at(-1)?.label} (${signed(housesSorted.at(-1)?.change ?? 0, 1, "%")}).`}
-            items={[...houses.items].sort((a, b) => b.value - a.value).map((i) => ({ label: i.label, value: i.value, color: t.s1, extra: `${signed(i.change ?? 0, 1, "%")} vs a year ago` }))}
-            valueFormat={(v) => `$${fmt(v, 0)}k`} sources={[houses.source]} asOf={periodLabel(houses.as_of, "Q")}
-            table={{ head: ["State", "Mean price ($'000)", "Change on a year ago"], rows: houses.items.map((i) => [i.label, fmt(i.value, 0), signed(i.change ?? 0, 1, "%")]), num: [1, 2] }} />
         )}
         {jobs && (
           <BarCard title="Where the jobs are" subtitle="Change in job vacancies over the year, industries with 5,000+ vacancies"
