@@ -29,6 +29,39 @@ ABS_FLOWS = {
     "HSI_M": "Monthly Household Spending Indicator",
 }
 
+ABS = "https://www.abs.gov.au/statistics"
+_CPI = f"{ABS}/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release"
+_LF = f"{ABS}/labour/employment-and-unemployment/labour-force-australia/latest-release"
+_GDP = f"{ABS}/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release"
+_TRADE = f"{ABS}/economy/international-trade/international-trade-goods/latest-release"
+_LENDING = f"{ABS}/economy/finance/lending-indicators/latest-release"
+# The readable ABS release behind each data flow, for the source links on the page.
+ABS_PAGES = {
+    "CPI": _CPI, "CPI_M": _CPI, "CPI_Q": _CPI, "LF": _LF, "LF_UNDER": _LF,
+    "WPI": f"{ABS}/economy/price-indexes-and-inflation/wage-price-index-australia/latest-release",
+    "JV": f"{ABS}/labour/jobs/job-vacancies-australia/latest-release",
+    "ANA_AGG": _GDP, "ANA_IND_GVA": _GDP, "ITGS": _TRADE, "MERCH_EXP": _TRADE,
+    "BOP": f"{ABS}/economy/international-trade/balance-payments-and-international-investment-position-australia/latest-release",
+    "RES_DWELL_ST": f"{ABS}/economy/price-indexes-and-inflation/total-value-dwellings/latest-release",
+    "LEND_HOUSING": _LENDING, "LEND_BUSINESS": _LENDING,
+    "BA_GCCSA": f"{ABS}/industry/building-and-construction/building-approvals-australia/latest-release",
+    "ERP_COMP_Q": f"{ABS}/people/population/national-state-and-territory-population/latest-release",
+    "HSI_M": f"{ABS}/economy/finance/monthly-household-spending-indicator/latest-release",
+}
+ABS_BUSINESS_COUNTS_PAGE = f"{ABS}/economy/business-indicators/counts-australian-businesses-including-entries-and-exits/latest-release"
+RBA_PAGE = "https://www.rba.gov.au/statistics/tables/"
+
+# Final results from each Final Budget Outcome (out in late September), which the Budget tables
+# only pick up the following May. Add each new year by hand: the health check fails until it's in.
+# Final Budget Outcome 2025-26, Tables 1.1 and 1.2.
+BUDGET_OUTCOMES = {
+    "2026-06-30": {
+        "document": "Final Budget Outcome 2025-26",
+        "budget_receipts_pct_gdp": 26.1, "budget_payments_pct_gdp": 26.9, "budget_balance": -22300.0,
+        "budget_balance_pct_gdp": -0.8, "net_debt_pct_gdp": 18.8, "net_interest": 17600.0,
+    },
+}
+
 RBA_TABLES = {
     "a2": "A2 Monetary policy changes",
     "f2": "F2 Capital market yields, government bonds (daily)",

@@ -18,7 +18,7 @@ const SERIES = [
   "lending_small_business_12m", "lending_medium_business_12m", "job_postings_indeed",
   "money_m1_growth", "money_m3_growth", "credit_housing_growth", "credit_business_growth", "credit_personal_growth",
   "dwelling_mean_price", "dwelling_approvals_12m", "lending_owner_occupier", "lending_investor", "lending_first_home_buyer",
-  "cpi_rents_yoy", "household_debt_to_income",
+  "cpi_rents_yoy", "household_debt_to_income", "job_vacancies",
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
@@ -59,7 +59,7 @@ export default function App() {
           <button type="button" className="theme-toggle" onClick={() => setPref(NEXT_THEME[pref])}>{THEME_LABEL[pref]}</button>
         </header>
 
-        {error && <p className="status-msg">Couldn't load the data ({error}). Run the pipeline: python -m pipeline.build</p>}
+        {error && <p className="status-msg">Couldn't load the data. Please refresh the page, or try again shortly.</p>}
         {!data && !error && <p className="status-msg">Loading the latest numbers…</p>}
 
         {data && <TopBar range={range} onRange={setRange} />}
@@ -70,7 +70,13 @@ export default function App() {
               <div className="summary">
                 <h2>In short</h2>
                 <p>{buildSummary(data).join(" ")}</p>
-                <div className="meta">Refreshed every day from official releases. Last checked {updated}.</div>
+                <div className="meta">Checked for new data every day. Last checked {updated}.</div>
+                {(data.manifest.stale?.length ?? 0) > 0 && (
+                  <p className="notice">Some sources couldn't be reached on the last check, so a few charts are showing their most recent data.</p>
+                )}
+                {[...SERIES.filter((id) => !data.series[id]), ...BUNDLES.filter((id) => !data.bundles[id])].length > 0 && (
+                  <p className="notice">Some charts aren't showing because their data didn't load. Please refresh the page.</p>
+                )}
               </div>
 
               <div className="tiles">

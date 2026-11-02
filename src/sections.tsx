@@ -40,6 +40,12 @@ function topWithOther(b: Bundle, n: number, otherLabel: string) {
   return [...items, { key: "other", label: otherLabel, value: Math.round(value * 10) / 10, share: Math.round(share * 10) / 10 }];
 }
 
+/** The ABS surveys job vacancies in the middle month of each quarter and names releases after it. */
+const surveyMonth = (quarterEnd: string) => {
+  const m = Number(quarterEnd.slice(5, 7)) - 1;
+  return periodLabel(`${quarterEnd.slice(0, 4)}-${String(m).padStart(2, "0")}-01`);
+};
+
 /** Lower-case the first letter for use mid-sentence, leaving acronyms alone. */
 export const lc = (s: string) => s.replace(/\S+/g, (w) => (/[A-Z]{2,}/.test(w) ? w : w.toLowerCase()));
 
@@ -61,6 +67,7 @@ export function GoingSection({ data }: { data: Data }) {
           <LineCard anchor="chart-inflation" title="Inflation"
             subtitle={range === "5y" ? "Annual change in consumer prices, monthly" : "Annual change in consumer prices, quarterly"}
             takeaway={`Headline ${pct(last(S.cpi_yoy)[1])}, underlying ${pct(last(S.trimmed_mean_yoy)[1])} (${periodLabel(last(S.cpi_yoy)[0])}). The RBA aims for 2–3%.`}
+            note={range === "5y" ? undefined : `Those are the latest monthly figures. This chart uses quarterly figures so it can reach further back, so its latest points are ${pct(last(S.cpi_yoy_q)[1])} and ${pct(last(S.trimmed_mean_yoy_q)[1])}.`}
             lines={range === "5y"
               ? [{ s: S.cpi_yoy, name: "All prices (CPI)", color: t.s1 }, { s: S.trimmed_mean_yoy, name: "Underlying (trimmed mean)", color: t.s2 }]
               : [{ s: S.cpi_yoy_q, name: "All prices (CPI)", color: t.s1 }, { s: S.trimmed_mean_yoy_q, name: "Underlying (trimmed mean)", color: t.s2 }]}
@@ -88,7 +95,7 @@ export function GoingSection({ data }: { data: Data }) {
         )}
         {S.money_m1_growth && S.money_m3_growth && (
           <LineCard anchor="chart-money-supply" title="Money supply" subtitle="Annual change in the amount of money in the economy, monthly"
-            takeaway={`There is ${pct(last(S.money_m3_growth)[1])} more money in the economy (M3) than a year ago. Money in everyday accounts (M1) is ${signed(last(S.money_m1_growth)[1], 1, "%")}.`}
+            takeaway={`There is ${pct(last(S.money_m3_growth)[1])} more money in the economy (M3) than a year ago. Money in everyday accounts (M1) is ${last(S.money_m1_growth)[1] < 0 ? "down" : "up"} ${pct(Math.abs(last(S.money_m1_growth)[1]))}.`}
             lines={[{ s: S.money_m1_growth, name: "M1 (spending money)", color: t.s1 }, { s: S.money_m3_growth, name: "M3 (incl. savings)", color: t.s2 }]}
             yFormat={(v) => pct(v)} zeroLine
             glossary={{
@@ -225,12 +232,12 @@ export function BudgetSection({ data }: { data: Data }) {
         )}
         {bal && (
           <ColumnCard title="Surplus or deficit" subtitle="Underlying cash balance, % of GDP, by financial year"
-            takeaway={`Last actual: ${signed(actuals(bal).at(-1)![1], 1, "%")} of GDP. Treasury expects deficits every year to ${periodLabel(last(bal)[0], "FY")}.`}
+            takeaway={`The final result for ${periodLabel(actuals(bal).at(-1)![0], "FY")} was ${signed(actuals(bal).at(-1)![1], 1, "%")} of GDP. ${bal.points.filter(([d]) => d >= (bal.forecast_from ?? "9999")).every(([, v]) => v < 0) ? `Treasury expects deficits every year to ${periodLabel(last(bal)[0], "FY")}.` : `Treasury's forecasts run to ${periodLabel(last(bal)[0], "FY")}.`}`}
             s={bal} name="Balance" yFormat={(v) => `${fmt(v, 0)}%`} />
         )}
         {debt && (
           <LineCard title="Government debt" subtitle="Net debt, % of GDP, by financial year"
-            takeaway={`Net debt is ${pct(actuals(debt).at(-1)![1])} of GDP and forecast to reach ${pct(last(debt)[1])} by ${periodLabel(last(debt)[0], "FY")}.`}
+            takeaway={`Net debt was ${pct(actuals(debt).at(-1)![1])} of GDP at the end of ${periodLabel(actuals(debt).at(-1)![0], "FY")}, and is forecast to reach ${pct(last(debt)[1])} by ${periodLabel(last(debt)[0], "FY")}.`}
             lines={[{ s: debt, name: "Net debt", color: t.s1 }]} yFormat={(v) => `${fmt(v, 0)}%`} zeroLine />
         )}
       </div>
@@ -259,7 +266,7 @@ export function YouSection({ data }: { data: Data }) {
         {cpiB && (
           <BarCard title="What's getting more expensive" subtitle="Annual price change by category"
             takeaway={wage !== undefined
-              ? `${fasterThanWages.length} of ${cpiB.items.length} categories are rising faster than wages (${signed(wage, 1, "%")}), led by ${fasterThanWages.slice(0, 2).map((i) => lc(i.label)).join(" and ")}. Overall prices are up ${signed(cpi ?? 0, 1, "%")}.`
+              ? `${fasterThanWages.length} of ${cpiB.items.length} categories are rising faster than wages (${signed(wage, 1, "%")}), led by ${fasterThanWages.slice(0, 2).map((i) => lc(i.label)).join(" and ")}. Overall prices are up ${pct(cpi ?? 0)}.`
               : undefined}
             items={cpiB.items.map((i) => ({ label: i.label, value: i.value, color: wage !== undefined && i.value > wage ? t.s2 : t.axisMuted }))}
             valueFormat={(v) => signed(v, 1, "%")}
@@ -279,11 +286,11 @@ export function YouSection({ data }: { data: Data }) {
         )}
         {jobs && (
           <BarCard title="Where the jobs are" subtitle="Change in job vacancies over the year, industries with 5,000+ vacancies"
-            takeaway={jobsBig.length ? `Most growth in ${jobsBig.slice(0, 2).map((i) => lc(i.label)).join(" and ")}; the biggest drop in ${lc(jobsBig.at(-1)!.label)}. ${fmt(jobs.items.reduce((a, i) => a + i.value, 0), 0)},000 job vacancies in total.` : undefined}
+            takeaway={jobsBig.length ? `Most growth in ${jobsBig.slice(0, 2).map((i) => lc(i.label)).join(" and ")}; the biggest drop in ${lc(jobsBig.at(-1)!.label)}. ${fmt(S.job_vacancies ? last(S.job_vacancies)[1] : jobs.items.reduce((a, i) => a + i.value, 0), 0)},000 job vacancies in total.` : undefined}
             items={jobsBig.map((i) => ({ label: i.label, value: i.change_pct!, color: i.change_pct! >= 0 ? t.divPos : t.divNeg, extra: `${fmt(i.value, 1)}k vacancies` }))}
             valueFormat={(v) => signed(v, 0, "%")}
             legend={[{ label: "More vacancies than a year ago", color: t.divPos, kind: "rect" }, { label: "Fewer", color: t.divNeg, kind: "rect" }]}
-            sources={[jobs.source]} asOf={periodLabel(jobs.as_of, "Q")}
+            sources={[jobs.source]} asOf={surveyMonth(jobs.as_of)}
             table={{ head: ["Industry", "Vacancies ('000)", "Change on a year ago"], rows: jobs.items.map((i) => [i.label, fmt(i.value, 1), signed(i.change_pct ?? 0, 1, "%")]), num: [1, 2] }} />
         )}
       </div>

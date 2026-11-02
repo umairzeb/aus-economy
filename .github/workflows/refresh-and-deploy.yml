@@ -1,11 +1,11 @@
-# Refreshes the data every morning, commits any changes, and publishes the site
+# Refreshes the data every afternoon, after the day's ABS (11:30am) and RBA (2:30pm) releases, commits any changes, and publishes the site
 # to GitHub Pages. Also redeploys on every push to main, and can be run by hand
 # from the Actions tab ("Run workflow").
 name: Refresh data and deploy
 
 on:
   schedule:
-    - cron: "30 20 * * *" # 20:30 UTC = 6:30am AEST / 7:30am AEDT
+    - cron: "30 5 * * *" # 05:30 UTC = 3:30pm AEST / 4:30pm AEDT
   push:
     branches: [main]
   workflow_dispatch:
@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pipeline: ${{ steps.pipeline.outcome }}
+      health: ${{ steps.health.outputs.code }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -45,8 +46,17 @@ jobs:
         # A failed source keeps its previous file, so publish whatever did update.
         continue-on-error: true
         run: python -m pipeline.build
+      - name: Test the safeguards
+        run: python -m tests.test_guards
+      - name: Check the data
+        id: health
+        # 0 all good, 1 data looks wrong (don't publish it), 2 needs a look but is safe to publish.
+        run: |
+          set +e
+          python -m tests.health_check
+          echo "code=$?" >> "$GITHUB_OUTPUT"
       - name: Commit updated data
-        if: ${{ !inputs.check_only }}
+        if: ${{ !inputs.check_only && steps.health.outputs.code != '1' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -85,13 +95,13 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@v5
 
-  # Fails (and GitHub emails you) when data is wrong or a source has been down for over
-  # two weeks (see STALE_DAYS in pipeline/build.py). The site has still been published.
+  # Fails (and GitHub emails you) when data is wrong, overdue, or a source has been down for
+  # over two weeks. Wrong data is held back; the site keeps its last good data.
   report:
     needs: [refresh, deploy]
-    if: ${{ !cancelled() && needs.refresh.outputs.pipeline == 'failure' }}
+    if: ${{ !cancelled() && (needs.refresh.outputs.pipeline == 'failure' || (needs.refresh.outputs.health != '' && needs.refresh.outputs.health != '0')) }}
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::error::Data looked wrong, or a source has been down for over two weeks. See the 'Fetch latest official data' step in the refresh job."
+          echo "::error::The data needs a look. See the 'Fetch latest official data' and 'Check the data' steps in the refresh job."
           exit 1

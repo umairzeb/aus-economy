@@ -62,3 +62,13 @@ Code layout:
 - `pipeline/bundles.py`: cross-sections
 - `pipeline/business.py`: business section series and bundles
 - `docs/data-sources.md`: source quirks and caveats
+
+## Health check
+
+```bash
+python -m tests.health_check
+python -m tests.health_check --live
+python -m tests.test_guards
+```
+
+The first command checks the files in `public/data`: structure, how up to date each one is, sensible values, and whether the numbers agree with each other and with published releases. `--live` also compares them with the raw ABS and RBA data and tests every source link. The daily refresh runs the first and third, and holds back data that looks wrong. `tests/browser_audit.js` checks the page itself: paste it into the browser console.

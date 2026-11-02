@@ -151,7 +151,7 @@ def cpi_breakdown(got) -> dict:
     items.sort(key=lambda x: -x["value"])
     return dict(id="cpi_breakdown", title="What's getting more expensive", unit="% y/y", section="prices",
                 as_of=max(i["as_of"] for i in items), items=items,
-                source=abs_src("CPI", "3.<groups>.10.50.M"),
+                source=abs_src("CPI"),
                 notes="Annual price change by category, latest month. Compare with headline CPI.")
 
 

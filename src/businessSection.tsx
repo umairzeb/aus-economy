@@ -56,6 +56,7 @@ export function BusinessSection({ data }: { data: Data }) {
             takeaway={closingMore.length
               ? `More closed than opened among businesses with ${closingMore.join(" and ")}. The smallest firms churn the most: many start and many stop.`
               : "More businesses opened than closed in every size group."}
+            note="Group totals can still grow when more closed than opened, because firms also move between sizes as they hire or shrink."
             categories={counts.items.map((i) => i.label)}
             series={[
               { name: "Opened (entry rate)", values: counts.items.map((i) => i.entry_rate ?? 0), color: t.s1 },
@@ -75,7 +76,7 @@ export function BusinessSection({ data }: { data: Data }) {
         )}
         {lendSmall && lendMedium && (
           <LineCard title="New lending to businesses" subtitle="New loans over the past 12 months, $bn. The ABS publishes no split for large firms."
-            takeaway={`Banks lent ${billions(last(lendSmall)[1])} to small businesses and ${billions(last(lendMedium)[1])} to medium ones over the past year.`}
+            takeaway={`Lenders provided ${billions(last(lendSmall)[1])} to small businesses and ${billions(last(lendMedium)[1])} to medium ones over the past year.`}
             lines={[
               { s: lendSmall, name: "Small businesses", color: t.s1 },
               { s: lendMedium, name: "Medium businesses", color: t.s2 },
