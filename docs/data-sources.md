@@ -47,6 +47,13 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - The "Where the jobs are" chart uses ABS Job Vacancies by industry (`JV`, original series, compared with the same quarter a year earlier). It is quarterly; the survey month is February, May, August or November.
 - It used to use the Jobs and Skills Australia Internet Vacancy Index (online job ads by occupation, monthly). jobsandskills.gov.au stalls requests from cloud servers such as GitHub Actions, even with retries and normal browser headers, while the same files download instantly from a home connection. The daily refresh failed every day, so the source was dropped (Oct 2026). Bringing it back would need the data fetched from a home connection.
 
+## Housing
+
+- `dwelling_mean_price` (ABS Total Value of Dwellings) is the average value of all homes, not of homes sold. It is quarterly, national and by state only. City and suburb prices and auction results mostly come from private companies, so they aren't included.
+- New home loans (ABS Lending Indicators): the first home buyer series is part of the owner-occupier total, so investor and first home buyer shares are worked out against owner-occupier plus investor lending.
+- Approvals are compared with the National Housing Accord pace of 240,000 homes a year (1.2 million over 5 years from mid-2024). The Accord counts finished homes, and approvals are only plans, so the comparison is a guide. The flat line is drawn across the whole chart for reference, though the Accord only began in mid-2024.
+- CPI rents cover all rents being paid, not just new listings, and the monthly series starts in 2023.
+
 ## Business
 
 - RBA F7 has interest rates on new and outstanding business loans by size (small, medium, large), monthly from July 2019. The older F5 small/large business indicator rates are mostly discontinued.

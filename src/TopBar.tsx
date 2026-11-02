@@ -7,6 +7,7 @@ export const SECTIONS = [
   { id: "going", label: "How it's going" },
   { id: "earn", label: "How we earn" },
   { id: "budget", label: "Government money" },
+  { id: "housing", label: "Housing" },
   { id: "you", label: "What it means for me" },
   { id: "business", label: "For business" },
 ];
