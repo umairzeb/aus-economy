@@ -41,6 +41,7 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - Table 6.3 has no split of "Other purposes". Budget Paper 1 (Statement 6) names its parts (GST and other general payments to the states, public debt interest, interest on public-sector super, natural disaster relief, the contingency reserve) but the amounts are only in the PDF, so the dashboard lists the parts without amounts.
 - Rows marked `(e)` are Treasury estimates. Series carry `forecast_from`, and the manifest headline uses the last actual year.
 - MYEFO (December) updates are a separate publication and not yet wired in.
+- The Final Budget Outcome comes out each September, but the Budget tables only include it the following May. Until then, `BUDGET_OUTCOMES` in `pipeline/registry.py` holds the final result, added by hand each year. The health check fails from October if it's missing, and the entry stops applying once the Budget tables catch up.
 
 ## Job vacancies (replaced Jobs and Skills Australia)
 

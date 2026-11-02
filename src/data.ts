@@ -61,6 +61,7 @@ export interface Manifest {
   generated: string;
   errors: { id: string; error: string }[];
   warnings: string[];
+  stale?: { file: string }[];
 }
 
 export interface Data {

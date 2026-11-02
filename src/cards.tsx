@@ -42,7 +42,13 @@ interface LineCardProps {
 export function LineCard(p: LineCardProps) {
   const t = useTokens();
   const { range, start } = useRange();
-  const lines = p.lines.map((l) => ({ ...l, pts: since(l.points ?? l.s.points, start) }));
+  const lines = p.lines.map((l) => {
+    const all = l.points ?? l.s.points;
+    const pts = since(all, start);
+    // A step series only has points when it changes: start from the value in force at the range's start.
+    const before = l.step ? all.filter(([d]) => d < start).at(-1) : undefined;
+    return { ...l, pts: before && pts[0]?.[0] !== start ? ([[start, before[1]], ...pts] as Point[]) : pts };
+  });
   const firstDate = lines.map((l) => l.pts[0]?.[0] ?? "9999").sort()[0];
   const lastDate = lines.map((l) => l.pts.at(-1)?.[0] ?? "").sort().at(-1)!;
   const freq = p.lines[0].s.freq;
@@ -67,7 +73,9 @@ export function LineCard(p: LineCardProps) {
   ];
 
   // Table: one row per date, newest first.
-  const dates = [...new Set(lines.flatMap((l) => l.pts.map(([d]) => d)))].sort().reverse();
+  // A step line alongside others takes their dates, so its own change dates don't add near-empty rows.
+  const rowLines = lines.some((l) => !l.step) ? lines.filter((l) => !l.step) : lines;
+  const dates = [...new Set(rowLines.flatMap((l) => l.pts.map(([d]) => d)))].sort().reverse();
   const maps = lines.map((l) => new Map(l.pts));
   const head = ["Period", ...lines.flatMap((l, i) => (changes[i] ? [l.name, lines.length > 1 ? `${l.name} vs a year earlier` : "vs a year earlier"] : [l.name]))];
   const table = {
@@ -75,7 +83,9 @@ export function LineCard(p: LineCardProps) {
     rows: dates.map((d) => [
       lines[0].step ? periodLabel(d, "event") : periodLabel(d, freq),
       ...maps.flatMap((m, i) => [
-        m.has(d) ? p.yFormat(m.get(d)!) : "–",
+        lines[i].step
+          ? ((v) => (v ? p.yFormat(v[1]) : "–"))(lines[i].pts.findLast(([x]) => x <= d))
+          : m.has(d) ? p.yFormat(m.get(d)!) : "–",
         ...(changes[i] ? [changes[i](d) ?? "–"] : []),
       ]),
     ]),
@@ -162,6 +172,7 @@ interface GroupedCardProps {
   title: string;
   subtitle?: string;
   takeaway?: ReactNode;
+  note?: ReactNode;
   categories: string[];
   series: { name: string; values: number[]; color: string }[];
   valueFormat: (v: number) => string;
@@ -177,7 +188,7 @@ export function GroupedCard(p: GroupedCardProps) {
     [t, p.categories, p.series],
   );
   return (
-    <ChartCard anchor={p.anchor} title={p.title} subtitle={p.subtitle} takeaway={p.takeaway}
+    <ChartCard anchor={p.anchor} title={p.title} subtitle={p.subtitle} takeaway={p.takeaway} note={p.note}
       legend={p.series.map((s) => ({ label: s.name, color: s.color, kind: "rect" as const }))}
       sources={p.sources} asOf={p.asOf} table={p.table}>
       <EChart option={option} height={groupedHeight(p.categories.length)} label={`${p.title}. Bar chart; use Show table for values.`} />

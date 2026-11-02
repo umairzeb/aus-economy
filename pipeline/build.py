@@ -15,7 +15,7 @@ import traceback
 from datetime import datetime, timezone
 
 from . import bundles, business, derived
-from .registry import ABS_FLOWS, RBA_TABLES, SERIES
+from .registry import ABS_FLOWS, RBA_TABLES, SERIES, RBA_PAGE
 from .sources import abs as abs_
 from .sources import rba
 from .transforms import splice, value_at_or_before
@@ -43,10 +43,34 @@ SANITY = {
 def source_for(spec: dict) -> dict:
     if "abs" in spec:
         flow, key = spec["abs"]
-        return {"name": derived.ABS, "dataset": ABS_FLOWS.get(flow, flow), "url": f"{abs_.BASE}/ABS,{flow}/{key}"}
+        return derived.abs_src(flow, key)
     table, sid = spec["rba"]
     return {"name": derived.RBA, "dataset": RBA_TABLES.get(table, table), "series_id": sid,
-            "url": rba.CSV_URL.format(table=table)}
+            "url": RBA_PAGE, "data_url": rba.CSV_URL.format(table=table)}
+
+
+def rejected(s: dict, previous: dict | None, lo_hi: tuple | None = None) -> str | None:
+    """Why a freshly built series shouldn't replace the file on disk, if any reason applies."""
+    pts = s["points"]
+    if not pts:
+        return "no data"
+    if lo_hi and not lo_hi[0] <= pts[-1][1] <= lo_hi[1]:
+        return f"latest {pts[-1][1]} outside {lo_hi}"
+    if previous and previous.get("points"):
+        old = previous["points"]
+        if len(pts) < len(old) * 0.9:
+            return f"only {len(pts)} points, was {len(old)}"
+        if pts[-1][0] < old[-1][0]:
+            return f"latest date went back from {old[-1][0]} to {pts[-1][0]}"
+    return None
+
+
+def rejected_bundle(b: dict, previous: dict | None) -> str | None:
+    if not b.get("items"):
+        return "no items"
+    if previous and len(b["items"]) < len(previous.get("items", [])) * 0.5:
+        return f"only {len(b['items'])} items, was {len(previous['items'])}"
+    return None
 
 
 def fetch_direct(spec: dict) -> dict:
@@ -143,23 +167,34 @@ def main() -> int:
             record_error(getattr(builder, "__name__", "bundle"), e)
 
     warnings = []
+    rejected_ids: set[str] = set()
     for sid, s in built.items():
+        path = DATA_DIR / "series" / f"{sid}.json"
+        previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+        reason = rejected(s, previous, SANITY.get(sid))
+        if reason:  # Keep the last good file rather than publish data that looks wrong.
+            warnings.append(f"{sid}: {reason}; kept the previous data")
+            rejected_ids.add(f"series/{sid}.json")
+            continue
         info = summarise(s)
-        lo_hi = SANITY.get(sid)
-        if lo_hi and not lo_hi[0] <= info["latest"]["value"] <= lo_hi[1]:
-            warnings.append(f"{sid}: latest {info['latest']['value']} outside {lo_hi}")
-        write_json(DATA_DIR / "series" / f"{sid}.json", s | {"updated": manifest["generated"]})
+        write_json(path, s | {"updated": manifest["generated"]})
         manifest["series"].append({k: s.get(k) for k in ("id", "title", "section", "unit", "freq", "hidden")}
                                   | {"source": s["source"]["name"]} | info)
 
     for b in bundle_list:
-        write_json(DATA_DIR / "bundles" / f"{b['id']}.json", b | {"updated": manifest["generated"]})
+        path = DATA_DIR / "bundles" / f"{b['id']}.json"
+        reason = rejected_bundle(b, json.loads(path.read_text(encoding="utf-8")) if path.exists() else None)
+        if reason:
+            warnings.append(f"{b['id']}: {reason}; kept the previous data")
+            rejected_ids.add(f"bundles/{b['id']}.json")
+            continue
+        write_json(path, b | {"updated": manifest["generated"]})
         manifest["bundles"].append({k: b.get(k) for k in ("id", "title", "section", "unit", "as_of")}
                                    | {"items": len(b["items"])})
 
     # Files this run didn't rewrite keep their last good data. That's fine for a
     # short outage, but a source stale for longer than STALE_DAYS fails the run.
-    written = {f"series/{sid}.json" for sid in built} | {f"bundles/{b['id']}.json" for b in bundle_list}
+    written = ({f"series/{sid}.json" for sid in built} | {f"bundles/{b['id']}.json" for b in bundle_list}) - rejected_ids
     stale, too_stale = [], []
     for f in sorted(DATA_DIR.glob("*/*.json")):
         rel = f.relative_to(DATA_DIR).as_posix()

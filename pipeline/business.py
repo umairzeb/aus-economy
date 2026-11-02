@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from . import transforms as t
 from .derived import ABS, abs_src
+from .registry import ABS_BUSINESS_COUNTS_PAGE
 from .sources import abs_files, asic, indeed
 
 ASIC = "Australian Securities & Investments Commission"
@@ -13,7 +14,7 @@ INDEED = "Indeed Hiring Lab"
 def series() -> list[dict]:
     """Series fetched from file-based sources (ASIC, Indeed)."""
     a = asic.companies_entering_administration()
-    asic_src = {"name": ASIC, "dataset": "Insolvency statistics, Series 1", "url": a["url"]}
+    asic_src = {"name": ASIC, "dataset": "Insolvency statistics, Series 1", "url": asic.PAGE_URL, "data_url": a["url"]}
     return [
         dict(id="insolvencies_m", title="Companies entering administration (month)", unit="companies",
              section="business", freq="M", points=a["points"], source=asic_src, hidden=True),
@@ -49,7 +50,8 @@ def business_counts_by_size() -> dict:
              for r in d["rows"] if r["year"] == latest]
     return dict(id="business_counts_by_size", title="Businesses opening and closing, by size", unit="businesses",
                 section="business", as_of=latest, items=items, history=d["rows"],
-                source={"name": ABS, "dataset": "Counts of Australian Businesses (8165.0), Table 13", "url": d["url"]},
+                source={"name": ABS, "dataset": "Counts of Australian Businesses (8165.0), Table 13",
+                        "url": ABS_BUSINESS_COUNTS_PAGE, "data_url": d["url"]},
                 notes="Entry rate = businesses that started during the year as a share of those operating at the "
                       "start; exit rate = those that stopped. Size is number of employees.")
 

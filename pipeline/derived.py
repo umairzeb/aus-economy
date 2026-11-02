@@ -6,7 +6,7 @@ returns a dict with at least id/title/unit/section/freq/points/source.
 from __future__ import annotations
 
 from . import transforms as t
-from .registry import ABS_FLOWS, CPI_COMPONENTS, RBA_TABLES
+from .registry import ABS_FLOWS, ABS_PAGES, BUDGET_OUTCOMES, CPI_COMPONENTS, RBA_PAGE, RBA_TABLES
 from .sources import abs as abs_
 from .sources import budget
 
@@ -15,8 +15,10 @@ RBA = "Reserve Bank of Australia"
 BUDGET = "Australian Government Budget (Budget Paper No. 1)"
 
 
-def abs_src(flow: str, key: str) -> dict:
-    return {"name": ABS, "dataset": ABS_FLOWS.get(flow, flow), "url": f"{abs_.BASE}/ABS,{flow}/{key}"}
+def abs_src(flow: str, key: str | None = None) -> dict:
+    """`url` is the readable ABS release for people; `data_url` is the API query behind it."""
+    src = {"name": ABS, "dataset": ABS_FLOWS.get(flow, flow), "url": ABS_PAGES[flow]}
+    return src | {"data_url": f"{abs_.BASE}/ABS,{flow}/{key}"} if key else src
 
 
 def cpi_monthly() -> list[dict]:
@@ -76,41 +78,41 @@ def from_others(got) -> list[dict]:
     return [
         dict(id="real_wage_growth", title="Real wage growth", unit="pp", section="jobs", freq="Q",
              points=t.subtract(q("wpi_yoy"), q("cpi_yoy_q"), 1),
-             source={"name": ABS, "dataset": ABS_FLOWS["WPI"] + "; " + ABS_FLOWS["CPI"], "url": abs_.BASE},
+             source=abs_src("WPI") | {"dataset": ABS_FLOWS["WPI"] + "; " + ABS_FLOWS["CPI"]},
              notes="Wage growth minus inflation. Negative means pay is buying less than a year ago."),
         dict(id="money_m1_growth", title="M1 money supply growth", unit="% y/y", section="money", freq="M",
              points=t.pct_change(q("money_m1"), 12, 1),
-             source={"name": RBA, "dataset": RBA_TABLES["d3"], "url": "https://www.rba.gov.au/statistics/tables/"}),
+             source={"name": RBA, "dataset": RBA_TABLES["d3"], "url": RBA_PAGE}),
         dict(id="employment_change", title="Jobs added (monthly)", unit="'000", section="jobs", freq="M",
              points=t.diff(q("employed_persons"), 1, 1),
-             source={"name": ABS, "dataset": ABS_FLOWS["LF"], "url": abs_.BASE}),
+             source=abs_src("LF")),
         dict(id="gdp_growth_yoy", title="Economic growth (real GDP, annual)", unit="% y/y", section="growth",
              freq="Q", points=t.pct_change(q("gdp_real"), 4, 1),
-             source={"name": ABS, "dataset": ABS_FLOWS["ANA_AGG"], "url": abs_.BASE}),
+             source=abs_src("ANA_AGG")),
         dict(id="gdp_per_capita_growth_yoy", title="Growth per person (real GDP per capita, annual)",
              unit="% y/y", section="growth", freq="Q", points=t.pct_change(q("gdp_per_capita_real"), 4, 1),
-             source={"name": ABS, "dataset": ABS_FLOWS["ANA_AGG"], "url": abs_.BASE},
+             source=abs_src("ANA_AGG"),
              notes="If this is negative while GDP grows, the economy is only growing because there are more people."),
         dict(id="trade_balance_12m", title="Goods trade surplus (12 months)", unit="$bn", section="trade", freq="M",
              points=t.scale(t.rolling_sum(q("trade_balance_goods"), 12), 1 / 1000, 1),
-             source={"name": ABS, "dataset": ABS_FLOWS["ITGS"], "url": abs_.BASE}),
+             source=abs_src("ITGS")),
         dict(id="exports_education_4q", title="Education exports (12 months)", unit="$bn", section="trade",
              freq="Q", points=t.scale(t.rolling_sum(q("exports_education_q"), 4), 1 / 1000, 1),
-             source={"name": ABS, "dataset": ABS_FLOWS["BOP"], "url": abs_.BASE}),
+             source=abs_src("BOP")),
         dict(id="dwelling_approvals_12m", title="Dwellings approved (12 months)", unit="dwellings",
              section="housing", freq="M", points=t.rolling_sum(q("dwelling_approvals_m"), 12),
-             source={"name": ABS, "dataset": ABS_FLOWS["BA_GCCSA"], "url": abs_.BASE},
+             source=abs_src("BA_GCCSA"),
              notes="Rolling 12-month total. The National Housing Accord target is 1.2 million homes over "
                    "5 years from mid-2024 (~240,000 a year)."),
         dict(id="population_growth_yoy", title="Population growth (annual)", unit="% y/y", section="population",
              freq="Q", points=t.pct_change(q("population"), 4, 2),
-             source={"name": ABS, "dataset": ABS_FLOWS["ERP_COMP_Q"], "url": abs_.BASE}),
+             source=abs_src("ERP_COMP_Q")),
         dict(id="nom_annual", title="Net overseas migration (12 months)", unit="people", section="population",
              freq="Q", points=t.rolling_sum(q("nom_q"), 4),
-             source={"name": ABS, "dataset": ABS_FLOWS["ERP_COMP_Q"], "url": abs_.BASE}),
+             source=abs_src("ERP_COMP_Q")),
         dict(id="natural_increase_annual", title="Births minus deaths (12 months)", unit="people",
              section="population", freq="Q", points=t.rolling_sum(q("natural_increase_q"), 4),
-             source={"name": ABS, "dataset": ABS_FLOWS["ERP_COMP_Q"], "url": abs_.BASE}),
+             source=abs_src("ERP_COMP_Q")),
     ]
 
 
@@ -128,8 +130,15 @@ def budget_history() -> list[dict]:
     out = []
     for sid, title, table, col, unit in specs:
         pts, est = budget.history(table, col)
+        series_src = src
+        # A finished year the Budget tables still show as an estimate takes its final result.
+        for year_end, outcome in sorted(BUDGET_OUTCOMES.items()):
+            if year_end == est and sid in outcome:
+                pts = [[d, outcome[sid] if d == year_end else v] for d, v in pts]
+                est = next((d for d, _ in pts if d > year_end), None)
+                series_src = src | {"dataset": f"{src['dataset']}; {outcome['document']}"}
         out.append(dict(id=sid, title=title, unit=unit, section="budget", freq="FY", points=pts,
-                        forecast_from=est, source=src,
+                        forecast_from=est, source=series_src,
                         notes="Financial years ending 30 June. Points from forecast_from onward are "
                               "Treasury estimates, not actuals."))
     return out

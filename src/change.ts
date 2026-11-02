@@ -40,12 +40,13 @@ export function yearChange(s: Series, points: Point[], yFormat: (v: number) => s
   const dates = points.map(([d]) => d);
   const byDate = new Map(points);
   return (date) => {
-    const now = byDate.get(date);
+    // A cash rate decision stays in force until the next one, so any date has a value.
+    const inForce = s.freq === "event" ? lastOnOrBefore(dates, date) : -1;
+    const now = inForce >= 0 ? points[inForce][1] : byDate.get(date);
     if (now === undefined) return undefined;
     const target = `${Number(date.slice(0, 4)) - 1}${date.slice(4)}`;
     const i = lastOnOrBefore(dates, target);
     if (i < 0) return undefined;
-    // A cash rate decision stays in force until the next one, so gaps are fine there.
     if (s.freq !== "event" && Date.parse(date) - Date.parse(dates[i]) - 365 * DAY > MAX_GAP) return undefined;
     const ago = points[i][1];
     if (isRate) return signed(round(now - ago, dp), dp, " pts");
