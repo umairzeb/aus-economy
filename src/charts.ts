@@ -36,6 +36,8 @@ export interface LineSpec {
   step?: boolean;
   /** Points on/after this date are drawn dashed as forecasts. */
   forecastFrom?: string | null;
+  /** Change on a year earlier at a date, shown in the tooltip. */
+  change?: (date: string) => string | undefined;
 }
 
 export interface LineOpts {
@@ -173,7 +175,11 @@ export function lineOption(o: LineOpts): EChartsOption {
         const seen = new Set<string>();
         const rows = ps
           .filter((p) => !seen.has(p.seriesName) && seen.add(p.seriesName))
-          .map((p) => ttRow(p.color, o.yFormat(p.value[1]), p.seriesName + (p.seriesId.endsWith("-forecast") ? " (forecast)" : "")));
+          .map((p) => {
+            const change = o.series.find((s) => s.name === p.seriesName)?.change?.(p.value[0]);
+            return ttRow(p.color, o.yFormat(p.value[1]), p.seriesName + (p.seriesId.endsWith("-forecast") ? " (forecast)" : "")) +
+              (change ? `<div class="tt-change">${escapeHtml(change)} vs a year earlier</div>` : "");
+          });
         return `<div class="tt"><div class="tt-head">${periodLabel(ps[0].value[0], o.freq)}</div>${rows.join("")}</div>`;
       },
     },

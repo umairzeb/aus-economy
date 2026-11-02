@@ -1,6 +1,7 @@
 // Reusable chart cards: line cards for time series, bar cards for bundles.
 import { useCallback, type ReactNode } from "react";
 import { since, type Point, type Series, type Source } from "./data";
+import { yearChange } from "./change";
 import { barListHeight, barOption, columnOption, groupedBarOption, groupedHeight, lineOption, type BarItem, type RefLine } from "./charts";
 import { EChart } from "./components/EChart";
 import { ChartCard, type LegendEntry } from "./components/ui";
@@ -16,6 +17,8 @@ export interface LineInput {
   step?: boolean;
   /** Override the plotted points (e.g. a step series extended to today). */
   points?: Point[];
+  /** Leave out the change on a year earlier (e.g. a flat target line). */
+  noChange?: boolean;
 }
 
 interface LineCardProps {
@@ -43,13 +46,15 @@ export function LineCard(p: LineCardProps) {
   const lastDate = lines.map((l) => l.pts.at(-1)?.[0] ?? "").sort().at(-1)!;
   const freq = p.lines[0].s.freq;
   const hasForecast = p.lines.some((l) => l.s.forecast_from);
+  // Worked out on the full series, so the first year of a shorter range still has a figure.
+  const changes = p.lines.map((l) => (l.noChange ? undefined : yearChange(l.s, l.points ?? l.s.points, p.yFormat)));
   const option = useCallback(
     (width: number) =>
       lineOption({
         t, width, freq, yFormat: p.yFormat, band: p.band, zeroLine: p.zeroLine, endLabels: true,
         breaks: p.breaks ? p.lines[0].s.breaks?.filter((b) => b.date >= firstDate) : undefined,
         events: p.events === false ? undefined : eventsBetween(firstDate, lastDate),
-        series: lines.map((l) => ({ name: l.name, points: l.pts, color: l.color, step: l.step, forecastFrom: l.s.forecast_from })),
+        series: lines.map((l, i) => ({ name: l.name, points: l.pts, color: l.color, step: l.step, forecastFrom: l.s.forecast_from, change: changes[i] })),
       }),
     [t, start, ...p.lines.map((l) => l.s)],
   );
@@ -63,13 +68,17 @@ export function LineCard(p: LineCardProps) {
   // Table: one row per date, newest first.
   const dates = [...new Set(lines.flatMap((l) => l.pts.map(([d]) => d)))].sort().reverse();
   const maps = lines.map((l) => new Map(l.pts));
+  const head = ["Period", ...lines.flatMap((l, i) => (changes[i] ? [l.name, lines.length > 1 ? `${l.name} vs a year earlier` : "vs a year earlier"] : [l.name]))];
   const table = {
-    head: ["Period", ...lines.map((l) => l.name)],
+    head,
     rows: dates.map((d) => [
       lines[0].step ? periodLabel(d, "event") : periodLabel(d, freq),
-      ...maps.map((m) => (m.has(d) ? p.yFormat(m.get(d)!) : "–")),
+      ...maps.flatMap((m, i) => [
+        m.has(d) ? p.yFormat(m.get(d)!) : "–",
+        ...(changes[i] ? [changes[i](d) ?? "–"] : []),
+      ]),
     ]),
-    num: lines.map((_, i) => i + 1),
+    num: head.slice(1).map((_, i) => i + 1),
   };
 
   // Say so when a series can't reach back as far as the chosen range.
