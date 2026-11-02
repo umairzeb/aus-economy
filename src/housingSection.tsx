@@ -50,7 +50,7 @@ export function HousingSection({ data }: { data: Data }) {
             takeaway={`${fmt(last(approvals)[1], 0)} homes were approved in the 12 months to ${periodLabel(last(approvals)[0])}, ${fmt(Math.abs(approvalsGap), 0)}% ${approvalsGap < 0 ? "below" : "above"} the ${fmt(ACCORD_PACE, 0)} a year in the National Housing Accord, which began in mid-2024.`}
             lines={[
               { s: approvals, name: "Homes approved", color: t.s1 },
-              { s: approvals, name: "Accord pace", color: t.s2, points: accordLine },
+              { s: approvals, name: "Accord pace", color: t.s2, points: accordLine, noChange: true },
             ]}
             yFormat={(v) => fmt(v, 0)} />
         )}
