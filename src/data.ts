@@ -30,6 +30,8 @@ export interface BundleItem {
   share?: number;
   change?: number | null;
   change_pct?: number | null;
+  /** Per cent change over the latest quarter. */
+  change_q?: number;
   as_of?: string;
   full_label?: string;
   entry_rate?: number;

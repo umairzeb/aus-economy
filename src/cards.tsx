@@ -26,6 +26,7 @@ interface LineCardProps {
   title: string;
   subtitle?: string;
   takeaway?: ReactNode;
+  note?: ReactNode;
   lines: LineInput[];
   yFormat: (v: number) => string;
   band?: [number, number];
@@ -92,7 +93,7 @@ export function LineCard(p: LineCardProps) {
   const s0 = lines[0].s;
   const latest = (s0.forecast_from ? s0.points.filter(([d]) => d < s0.forecast_from!) : s0.points).at(-1)![0];
   return (
-    <ChartCard anchor={p.anchor} title={p.title} subtitle={subtitle} takeaway={p.takeaway} legend={legend}
+    <ChartCard anchor={p.anchor} title={p.title} subtitle={subtitle} takeaway={p.takeaway} note={p.note} legend={legend}
       sources={lines.map((l) => l.s.source)} asOf={`latest ${s0.forecast_from ? "actual " : ""}${periodLabel(latest, freq)}`} table={table} glossary={p.glossary}>
       <EChart option={option} height={p.height ?? 260} label={`${p.title}. Line chart; use Show table for values.`} />
     </ChartCard>
@@ -104,6 +105,7 @@ interface BarCardProps {
   title: string;
   subtitle?: string;
   takeaway?: ReactNode;
+  note?: ReactNode;
   items: BarItem[];
   valueFormat: (v: number) => string;
   refLines?: RefLine[];
@@ -120,7 +122,7 @@ export function BarCard(p: BarCardProps) {
     [t, p.items],
   );
   return (
-    <ChartCard anchor={p.anchor} title={p.title} subtitle={p.subtitle} takeaway={p.takeaway} legend={p.legend} sources={p.sources} asOf={p.asOf} table={p.table}>
+    <ChartCard anchor={p.anchor} title={p.title} subtitle={p.subtitle} takeaway={p.takeaway} note={p.note} legend={p.legend} sources={p.sources} asOf={p.asOf} table={p.table}>
       <EChart option={option} height={barListHeight(p.items.length, p.refLines?.length ?? 0)} label={`${p.title}. Bar chart; use Show table for values.`} />
     </ChartCard>
   );

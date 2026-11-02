@@ -7,6 +7,7 @@ import { useTokens } from "./theme";
 
 /** National Housing Accord: 1.2 million homes over 5 years from mid-2024. */
 const ACCORD_PACE = 240000;
+const COTALITY_URL = "https://www.cotality.com/au/our-data/indices";
 
 export function HousingSection({ data }: { data: Data }) {
   const t = useTokens();
@@ -22,7 +23,21 @@ export function HousingSection({ data }: { data: Data }) {
   const debt = S.household_debt_to_income;
 
   const priceAgo = price && yearAgo(price);
-  const housesSorted = houses ? [...houses.items].sort((a, b) => (b.change ?? 0) - (a.change ?? 0)) : [];
+  const pricePrev = price && price.points.at(-2)?.[1];
+  const priceYear = price && priceAgo ? (last(price)[1] / priceAgo - 1) * 100 : undefined;
+  const priceQuarter = price && pricePrev ? (last(price)[1] / pricePrev - 1) * 100 : undefined;
+  const byQuarter = houses ? [...houses.items].filter((i) => i.change_q != null).sort((a, b) => a.change_q! - b.change_q!) : [];
+  const fell = byQuarter.filter((i) => i.change_q! < 0);
+  const rose = byQuarter.at(-1);
+  const stateText = (i: { label: string; change_q?: number }) => `${i.label} (${signed(i.change_q ?? 0, 1, "%")})`;
+  const fellText = fell.length > 1 ? `${fell.slice(0, -1).map(stateText).join(", ")} and ${stateText(fell.at(-1)!)}` : fell.map(stateText).join("");
+  // Official prices come out months after the quarter ends, so say where they stop.
+  const priceNote = (end: string) => (
+    <>
+      These official figures end at {end}, so they can miss a recent turn in the market. For monthly figures, see{" "}
+      <a href={COTALITY_URL} target="_blank" rel="noopener noreferrer">Cotality's home value indices</a> (a private company).
+    </>
+  );
   const accordLine: Point[] = approvals ? approvals.points.map(([d]) => [d, ACCORD_PACE]) : [];
   const approvalsGap = approvals ? (last(approvals)[1] / ACCORD_PACE - 1) * 100 : 0;
   const allLoans = owner && investor ? last(owner)[1] + last(investor)[1] : 0;
@@ -35,15 +50,17 @@ export function HousingSection({ data }: { data: Data }) {
       <div className="grid-2">
         {price && (
           <LineCard anchor="chart-home-prices" title="Home prices" subtitle="Average value of all homes in Australia, not just those sold, $'000"
-            takeaway={`The average home is worth $${fmt(last(price)[1] / 1000, 2)}m (${periodLabel(last(price)[0], "Q")})${priceAgo ? `, ${signed((last(price)[1] / priceAgo - 1) * 100, 1, "%")} on a year earlier` : ""}.`}
+            takeaway={`The average home is worth $${fmt(last(price)[1] / 1000, 2)}m (${periodLabel(last(price)[0], "Q")})${priceQuarter === undefined ? "" : `: ${priceQuarter < 0 ? "down" : "up"} ${pct(Math.abs(priceQuarter))} over the quarter`}${priceYear === undefined ? "" : `, and ${pct(Math.abs(priceYear))} ${priceYear < 0 ? "lower" : "higher"} than a year earlier`}.`}
+            note={priceNote(periodLabel(last(price)[0], "Q"))}
             lines={[{ s: price, name: "Average home", color: t.s1 }]} yFormat={(v) => `$${fmt(v, 0)}k`} />
         )}
         {houses && (
           <BarCard title="Home prices by state" subtitle="Mean dwelling price, $'000"
-            takeaway={`Fastest rises over the year: ${housesSorted.slice(0, 2).map((i) => `${i.label} (${signed(i.change ?? 0, 1, "%")})`).join(" and ")}. Slowest: ${housesSorted.at(-1)?.label} (${signed(housesSorted.at(-1)?.change ?? 0, 1, "%")}).`}
-            items={[...houses.items].sort((a, b) => b.value - a.value).map((i) => ({ label: i.label, value: i.value, color: t.s1, extra: `${signed(i.change ?? 0, 1, "%")} vs a year ago` }))}
+            takeaway={`In the ${periodLabel(houses.as_of, "Q")}, ${fell.length ? `prices fell in ${fellText}` : "prices didn't fall in any state"}${rose && rose.change_q! > 0 ? ` and rose most in ${stateText(rose)}` : ""}.`}
+            note={priceNote(periodLabel(houses.as_of, "Q"))}
+            items={[...houses.items].sort((a, b) => b.value - a.value).map((i) => ({ label: i.label, value: i.value, color: t.s1, extra: `${signed(i.change_q ?? 0, 1, "%")} over the quarter · ${signed(i.change ?? 0, 1, "%")} vs a year ago` }))}
             valueFormat={(v) => `$${fmt(v, 0)}k`} sources={[houses.source]} asOf={periodLabel(houses.as_of, "Q")}
-            table={{ head: ["State", "Mean price ($'000)", "Change on a year ago"], rows: houses.items.map((i) => [i.label, fmt(i.value, 0), signed(i.change ?? 0, 1, "%")]), num: [1, 2] }} />
+            table={{ head: ["State", "Mean price ($'000)", "Change over the quarter", "Change on a year ago"], rows: houses.items.map((i) => [i.label, fmt(i.value, 0), signed(i.change_q ?? 0, 1, "%"), signed(i.change ?? 0, 1, "%")]), num: [1, 2, 3] }} />
         )}
         {approvals && (
           <LineCard anchor="chart-approvals" title="Homes approved for building" subtitle="Rolling 12-month total. Approvals are plans, not finished homes."

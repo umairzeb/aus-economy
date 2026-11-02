@@ -197,6 +197,7 @@ a.tile-link:hover { border-color: var(--axis); }
 .card h3 { font-size: 16px; margin: 0; line-height: 1.3; }
 .card .subtitle { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; }
 .card .takeaway { font-size: 14px; color: var(--text-primary); margin: 10px 0 0; }
+.card .note { font-size: 13px; color: var(--text-secondary); margin: 6px 0 0; }
 .card .chart-wrap { margin-top: 12px; }
 .card footer {
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
