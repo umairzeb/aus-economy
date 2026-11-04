@@ -17,12 +17,13 @@ import re
 import statistics
 import sys
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
 
 from pipeline.registry import SERIES
+from pipeline.release_days import RBA_DECISIONS
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "public" / "data"
@@ -93,6 +94,13 @@ def actuals(s: dict) -> list:
     return [p for p in s["points"] if not fc or p[0] < fc]
 
 
+def future_dated(s: dict, today: date) -> bool:
+    """An actual figure dated ahead of today. RBA decisions carry the date they take effect,
+    the day after the announcement, so those may be a little ahead."""
+    limit = today + timedelta(days=2 if s["freq"] == "event" else 0)
+    return any(d > limit.isoformat() for d, _ in actuals(s))
+
+
 def fy_end(label: str) -> str:
     return f"{int(label[:4]) + 1}-06-30"
 
@@ -119,7 +127,7 @@ def check_structure(series: dict, bundles: dict) -> None:
             problems.append("non-numeric value")
         if any(not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
             problems.append("bad date")
-        if any(d > TODAY.isoformat() for d in [p[0] for p in actuals(s)]):
+        if future_dated(s, TODAY):
             problems.append("actual dated in the future")
         record(g, f"series {sid}", not problems, ", ".join(problems))
     for bid, b in bundles.items():
@@ -182,6 +190,10 @@ def check_freshness(series: dict, bundles: dict, manifest: dict) -> None:
     y0 = int(rev["as_of"][:4])
     expected = TODAY.year if TODAY.month >= 6 else TODAY.year - 1
     record(g, "bundles use the latest Budget", y0 >= expected, f"using {rev['as_of']}")
+
+    upcoming = [d for d in RBA_DECISIONS if d >= TODAY]
+    record(g, "the release-day schedule has an upcoming RBA decision", bool(upcoming) and (upcoming[0] - TODAY).days <= 120,
+           f"next listed is {upcoming[0] if upcoming else 'none'}: add new dates to RBA_DECISIONS in pipeline/release_days.py")
 
     gen = datetime.fromisoformat(manifest["generated"])
     hours = (datetime.now(timezone.utc) - gen).total_seconds() / 3600

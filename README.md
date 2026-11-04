@@ -72,3 +72,7 @@ python -m tests.test_guards
 ```
 
 The first command checks the files in `public/data`: structure, how up to date each one is, sensible values, and whether the numbers agree with each other and with published releases. `--live` also compares them with the raw ABS and RBA data and tests every source link. The daily refresh runs the first and third, and holds back data that looks wrong. `tests/browser_audit.js` checks the page itself: paste it into the browser console.
+
+## When the data refreshes
+
+`pipeline/release_days.py` decides. Every day it refreshes once after the ABS's 11:30am releases, and on RBA decision days twice more after the 2:30pm announcement, all in Sydney time. RBA dates are listed there by hand, and the health check fails if they run out.
