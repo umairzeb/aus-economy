@@ -1,8 +1,8 @@
 """Decides whether a scheduled run should refresh the data now.
 
-GitHub starts scheduled runs late, sometimes by hours, so the workflow wakes often and asks
-this module whether a refresh is due. A refresh is due when a key moment has passed in Sydney
-today and nothing has been attempted since:
+GitHub starts scheduled runs late, sometimes by hours, so the workflow wakes a few times a day
+and asks this module whether a refresh is due. A refresh is due when a key moment has passed
+in Sydney today and nothing has been attempted since:
 
 - every day at 11:45am, after the ABS's 11:30am releases, so any release day is covered
 - on RBA decision days at 2:45pm and 3:45pm too, after the 2:30pm announcement

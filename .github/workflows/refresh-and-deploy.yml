@@ -5,9 +5,11 @@ name: Refresh data and deploy
 
 on:
   schedule:
-    # GitHub often starts these late, so wake often. Most wake-ups find nothing is due and stop at once.
-    - cron: "7,37 0-8 * * *" # about 10am to 7:30pm in Sydney
-    - cron: "7 10,14,18,22 * * *" # in case the daytime ones are badly delayed
+    # Six wake-ups a day (UTC). Hours are doubled up because Sydney's clocks change. Most find
+    # nothing is due (see pipeline/release_days.py) and stop within seconds.
+    - cron: "7 1,2 * * *" # after the ABS's 11:30am releases
+    - cron: "7 4,5,6 * * *" # after a 2:30pm RBA decision
+    - cron: "7 10 * * *" # about 9pm in Sydney, in case the others were dropped
   push:
     branches: [main]
   workflow_dispatch:
