@@ -1,11 +1,15 @@
-# Refreshes the data every afternoon, after the day's ABS (11:30am) and RBA (2:30pm) releases, commits any changes, and publishes the site
+# Refreshes the data after each day's ABS releases and after RBA decisions (see pipeline/release_days.py), commits any changes, and publishes the site
 # to GitHub Pages. Also redeploys on every push to main, and can be run by hand
 # from the Actions tab ("Run workflow").
 name: Refresh data and deploy
 
 on:
   schedule:
-    - cron: "30 5 * * *" # 05:30 UTC = 3:30pm AEST / 4:30pm AEDT
+    # Six wake-ups a day (UTC). Hours are doubled up because Sydney's clocks change. Most find
+    # nothing is due (see pipeline/release_days.py) and stop within seconds.
+    - cron: "7 1,2 * * *" # after the ABS's 11:30am releases
+    - cron: "7 4,5,6 * * *" # after a 2:30pm RBA decision
+    - cron: "7 10 * * *" # about 9pm in Sydney, in case the others were dropped
   push:
     branches: [main]
   workflow_dispatch:
@@ -25,9 +29,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      due: ${{ steps.schedule.outputs.due || (github.event_name != 'push' && 'true') || 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'schedule'
+      - name: Is a refresh due?
+        id: schedule
+        if: github.event_name == 'schedule'
+        run: python3 -m pipeline.release_days
+
   refresh:
-    # A push already carries its own data; only scheduled and manual runs fetch new data.
-    if: github.event_name != 'push'
+    needs: gate
+    # A push already carries its own data; only due scheduled runs and manual runs fetch new data.
+    if: needs.gate.outputs.due == 'true'
     runs-on: ubuntu-latest
     outputs:
       pipeline: ${{ steps.pipeline.outcome }}
@@ -56,11 +73,18 @@ jobs:
           python -m tests.health_check
           echo "code=$?" >> "$GITHUB_OUTPUT"
       - name: Commit updated data
-        if: ${{ !inputs.check_only && steps.health.outputs.code != '1' }}
+        if: ${{ !inputs.check_only }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/data
+          # Data that looks wrong is held back. The attempt is still recorded so the
+          # schedule doesn't retry (and email) every half hour.
+          if [ "${{ steps.health.outputs.code }}" = "1" ]; then
+            git checkout -- public/data
+            git clean -fdq public/data
+          fi
+          date -u +%FT%TZ > pipeline/last_attempt.txt
+          git add public/data pipeline/last_attempt.txt
           if git diff --cached --quiet; then
             echo "No new data today."
           else
@@ -69,8 +93,8 @@ jobs:
           fi
 
   deploy:
-    needs: refresh
-    if: ${{ !cancelled() && !inputs.check_only && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
+    needs: [gate, refresh]
+    if: ${{ !cancelled() && !inputs.check_only && (github.event_name == 'push' || needs.refresh.result == 'success') }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
