@@ -1,15 +1,11 @@
 // One sticky bar for getting around: section links (current one highlighted) and the chart time range.
 import { useEffect, useRef, useState } from "react";
+import { CHAPTERS } from "./chapter";
 import { RangeBar, type Range } from "./range";
 
-export const SECTIONS = [
+export const SECTIONS: { id: string; label: string; n?: number; part?: string }[] = [
   { id: "overview", label: "Overview" },
-  { id: "going", label: "How it's going" },
-  { id: "earn", label: "How we earn" },
-  { id: "budget", label: "Government money" },
-  { id: "housing", label: "Housing" },
-  { id: "you", label: "What it means for me" },
-  { id: "business", label: "For business" },
+  ...CHAPTERS.map((c) => ({ id: c.id, label: c.short, n: c.n, part: c.part })),
 ];
 
 export function TopBar({ range, onRange }: { range: Range; onRange: (r: Range) => void }) {
@@ -42,8 +38,13 @@ export function TopBar({ range, onRange }: { range: Range; onRange: (r: Range) =
   return (
     <div className="topbar">
       <nav ref={navRef} className="topbar-nav" aria-label="Sections">
-        {SECTIONS.map((s) => (
-          <a key={s.id} href={`#${s.id}`} aria-current={active === s.id ? "location" : undefined}>{s.label}</a>
+        {SECTIONS.map((s, i) => (
+          <span key={s.id} className="nav-item">
+            {i > 0 && s.part !== SECTIONS[i - 1].part && <span className="nav-sep" aria-hidden="true" />}
+            <a href={`#${s.id}`} aria-current={active === s.id ? "location" : undefined}>
+              {s.n && <span className="nav-n" aria-hidden="true">{s.n}</span>}{s.label}
+            </a>
+          </span>
         ))}
       </nav>
       <RangeBar range={range} onChange={onRange} />

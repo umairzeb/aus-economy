@@ -197,6 +197,8 @@ export interface BarItem {
   extra?: string;
   /** Further tooltip lines: a breakdown or a note on what the bar covers. */
   details?: string[];
+  /** What's inside this bar, opened from an arrow beside its name. */
+  expand?: { title: string; rows: { label: string; value?: string }[]; note?: string };
 }
 
 export interface RefLine {
@@ -219,6 +221,14 @@ export function barOption(o: BarOpts): EChartsOption {
   const { t } = o;
   const labelWidth = Math.round(Math.min(210, Math.max(100, o.width * 0.44)));
   const hasNeg = o.items.some((i) => i.value < 0);
+  const expandable = new Set(o.items.filter((i) => i.expand).map((i) => i.label));
+  // Names are cut to fit so the arrow on expandable ones is never the part that gets lost.
+  const maxChars = Math.max(8, Math.floor((labelWidth - 8) / 6.4));
+  const fit = (s: string) => {
+    const room = maxChars - (expandable.has(s) ? 2 : 0);
+    const name = s.length > room ? `${s.slice(0, room - 1).trimEnd()}…` : s;
+    return expandable.has(s) ? `${name} ▾` : name;
+  };
   const plotWidth = Math.max(o.width - labelWidth - 64, 90);
   const data: BarSeriesOption["data"] = o.items.map((i) => ({
     value: i.value,
@@ -237,11 +247,12 @@ export function barOption(o: BarOpts): EChartsOption {
       type: "category",
       inverse: true,
       data: o.items.map((i) => i.label),
+      triggerEvent: true,
       axisTick: { show: false },
       // With negative bars the names stay at the left edge (not on the zero line) and a
       // separate baseline is drawn at zero, so bars never run into the names.
       axisLine: { show: !hasNeg, onZero: false, lineStyle: { color: t.axis } },
-      axisLabel: { color: t.textSecondary, fontSize: 12, width: labelWidth, overflow: "truncate", margin: 8 },
+      axisLabel: { color: t.textSecondary, fontSize: 12, width: labelWidth, overflow: "truncate", margin: 8, formatter: fit },
     },
     tooltip: {
       ...tooltipBase(t),

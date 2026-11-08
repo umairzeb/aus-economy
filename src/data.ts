@@ -40,6 +40,8 @@ export interface BundleItem {
   parts?: { label: string; value: number }[];
   /** What a vague category covers, when the source names it but gives no amounts. */
   description?: string;
+  /** The same, as a list. */
+  contains?: string[];
 }
 
 export interface Bundle {

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { loadData, type Data } from "./data";
-import { buildSummary, buildTiles } from "./insights";
-import { BudgetSection, EarnSection, GoingSection, YouSection } from "./sections";
+import { buildHeadline, buildSummary, buildTiles } from "./insights";
+import { pick } from "./chapter";
+import { BudgetSection, CostSection, EconomySection, JobsSection, RatesSection } from "./sections";
 import { BusinessSection } from "./businessSection";
 import { HousingSection } from "./housingSection";
 import { StatTile } from "./components/ui";
@@ -18,7 +19,7 @@ const SERIES = [
   "lending_small_business_12m", "lending_medium_business_12m", "job_postings_indeed",
   "money_m1_growth", "money_m3_growth", "credit_housing_growth", "credit_business_growth", "credit_personal_growth",
   "dwelling_mean_price", "dwelling_approvals_12m", "lending_owner_occupier", "lending_investor", "lending_first_home_buyer",
-  "cpi_rents_yoy", "household_debt_to_income", "job_vacancies",
+  "cpi_rents_yoy", "household_debt_to_income", "job_vacancies", "budget_balance", "budget_balance_pct_gdp",
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
@@ -41,9 +42,14 @@ export default function App() {
 
   // Sections render only once data arrives, so honour a #section link after that.
   useEffect(() => {
-    if (data && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    if (!data || !location.hash) return;
+    // Links shared before the chapters were reordered.
+    const OLD: Record<string, string> = { going: "cost", earn: "economy", you: "rates" };
+    const id = location.hash.slice(1);
+    document.getElementById(OLD[id] ?? id)?.scrollIntoView();
   }, [data]);
 
+  const tiles = useMemo(() => (data ? buildTiles(data) : []), [data]);
   const updated = data
     ? new Date(data.manifest.generated).toLocaleString("en-AU", { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" })
     : null;
@@ -69,7 +75,11 @@ export default function App() {
             <section id="overview" className="overview" aria-label="Overview">
               <div className="summary">
                 <h2>In short</h2>
-                <p>{buildSummary(data).join(" ")}</p>
+                <p className="headline">{buildHeadline(data)}</p>
+                <details className="full-summary">
+                  <summary>Read the full summary</summary>
+                  <p>{buildSummary(data).join(" ")}</p>
+                </details>
                 <div className="meta">Checked for new data every day. Last checked {updated}.</div>
                 {(data.manifest.stale?.length ?? 0) > 0 && (
                   <p className="notice">Some sources couldn't be reached on the last check, so a few charts are showing their most recent data.</p>
@@ -79,17 +89,18 @@ export default function App() {
                 )}
               </div>
 
-              <div className="tiles">
-                {buildTiles(data).map((tile) => <StatTile key={tile.label} {...tile} />)}
+              <div className="tiles tiles-headline">
+                {pick(tiles, "inflation", "unemployment", "cash_rate", "home_prices").map((tile) => <StatTile key={tile.label} {...tile} />)}
               </div>
             </section>
 
             <RangeContext.Provider value={{ range, start }}>
-              <GoingSection data={data} />
-              <EarnSection data={data} />
-              <BudgetSection data={data} />
+              <CostSection data={data} tiles={tiles} />
+              <JobsSection data={data} />
+              <RatesSection data={data} tiles={tiles} />
               <HousingSection data={data} />
-              <YouSection data={data} />
+              <EconomySection data={data} tiles={tiles} />
+              <BudgetSection data={data} />
               <BusinessSection data={data} />
             </RangeContext.Provider>
           </main>

@@ -2,7 +2,8 @@
 import { last, valueAt, yearAgo, type Data, type Point } from "./data";
 import { BarCard, LineCard } from "./cards";
 import { fmt, pct, periodLabel, signed } from "./format";
-import { Section } from "./sections";
+import { Chapter } from "./chapter";
+import { housingVerdict } from "./verdicts";
 import { useTokens } from "./theme";
 
 /** National Housing Accord: 1.2 million homes over 5 years from mid-2024. */
@@ -45,8 +46,7 @@ export function HousingSection({ data }: { data: Data }) {
   const debtAgo = debt && yearAgo(debt);
 
   return (
-    <Section id="housing" title="What's happening with housing?"
-      lede="What homes cost, how many are being approved, who is borrowing, and what's happening to rents and debt. Mortgage rates are under What it means for me.">
+    <Chapter id="housing" verdict={housingVerdict(data)}>
       <div className="grid-2">
         {price && (
           <LineCard anchor="chart-home-prices" title="Home prices" subtitle="Average value of all homes in Australia, not just those sold, $'000"
@@ -93,6 +93,6 @@ export function HousingSection({ data }: { data: Data }) {
             lines={[{ s: debt, name: "Debt to income", color: t.s1 }]} yFormat={(v) => `${fmt(v, 0)}%`} />
         )}
       </div>
-    </Section>
+    </Chapter>
   );
 }

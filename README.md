@@ -27,7 +27,9 @@ npm run build    # static site in dist/
 ```
 
 - `src/App.tsx`: page layout, summary and stat tiles
-- `src/sections.tsx`: the question sections
+- `src/chapter.tsx`: the seven numbered chapters and their order
+- `src/verdicts.ts`: the one-line plain-English verdict at the top of each chapter
+- `src/sections.tsx`: the chapters for cost of living, jobs, rates, the economy and government money
 - `src/businessSection.tsx`: the "For business" section
 - `src/housingSection.tsx`: the "Housing" section
 - `src/change.ts`: change on a year earlier, for line chart tooltips and tables

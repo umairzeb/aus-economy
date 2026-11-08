@@ -1,24 +1,14 @@
-// The questions the dashboard answers, each a section of cards.
-import type { ReactNode } from "react";
-import { actuals, last, valueAt, type Bundle, type Data } from "./data";
+// The chapters: each one a short verdict and the charts that back it up. Housing and Business have their own files.
+import { actuals, last, valueAt, type Bundle, type BundleItem, type Data } from "./data";
 import { BarCard, ColumnCard, LineCard } from "./cards";
 import type { BarItem } from "./charts";
+import { Chapter, pick } from "./chapter";
+import type { TileProps } from "./components/ui";
 import { withToday } from "./insights";
 import { billions, fmt, pct, periodLabel, signed } from "./format";
 import { useRange } from "./range";
 import { useTokens } from "./theme";
-
-export function Section({ id, title, lede, children }: { id: string; title: string; lede: string; children: ReactNode }) {
-  return (
-    <section className="section" id={id} aria-labelledby={`${id}-h`}>
-      <header>
-        <h2 id={`${id}-h`}>{title}</h2>
-        <p className="lede">{lede}</p>
-      </header>
-      {children}
-    </section>
-  );
-}
+import { budgetVerdict, costVerdict, economyVerdict, jobsVerdict, ratesVerdict } from "./verdicts";
 
 function Mini({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
@@ -31,7 +21,7 @@ function Mini({ label, value, note }: { label: string; value: string; note?: str
 }
 
 /** Top n items, the rest folded into one "All other" bar. */
-function topWithOther(b: Bundle, n: number, otherLabel: string) {
+function topWithOther(b: Bundle, n: number, otherLabel: string): BundleItem[] {
   const items = b.items.slice(0, n);
   const rest = b.items.slice(n);
   if (!rest.length) return items;
@@ -52,15 +42,23 @@ export const lc = (s: string) => s.replace(/\S+/g, (w) => (/[A-Z]{2,}/.test(w) ?
 const changeText = (c: number | null | undefined, what = "on the previous 12 months") =>
   c === null || c === undefined ? "" : `${signed(c, 1, "%")} ${what}`;
 
-// ---------------------------------------------------------------- 1
+const bn = (v: number) => `${v < 0 ? "−" : ""}$${fmt(Math.abs(v))}bn`;
 
-export function GoingSection({ data }: { data: Data }) {
+type Props = { data: Data; tiles: TileProps[] };
+
+// ---------------------------------------------------------------- 1 Cost of living
+
+export function CostSection({ data, tiles }: Props) {
   const t = useTokens();
   const { range } = useRange();
-  const S = data.series;
+  const { series: S, bundles: B } = data;
+  const cpiB = B.cpi_breakdown;
+  const wage = S.wpi_yoy ? last(S.wpi_yoy)[1] : undefined;
+  const cpi = S.cpi_yoy ? last(S.cpi_yoy)[1] : undefined;
+  const fasterThanWages = cpiB && wage !== undefined ? cpiB.items.filter((i) => i.value > wage) : [];
+
   return (
-    <Section id="going" title="How are things going?"
-      lede="The numbers that shape everyday life: prices, jobs, pay and growth, and how much money and borrowing is flowing through the economy.">
+    <Chapter id="cost" verdict={costVerdict(data)} tiles={pick(tiles, "real_wages")}>
       <div className="grid-2">
         {S.cpi_yoy && S.trimmed_mean_yoy && S.cpi_yoy_q && S.trimmed_mean_yoy_q && (
           // Monthly CPI only goes back to 2018, so longer ranges use the quarterly series (from 1949).
@@ -73,12 +71,6 @@ export function GoingSection({ data }: { data: Data }) {
               : [{ s: S.cpi_yoy_q, name: "All prices (CPI)", color: t.s1 }, { s: S.trimmed_mean_yoy_q, name: "Underlying (trimmed mean)", color: t.s2 }]}
             yFormat={(v) => pct(v)} band={S.cpi_yoy.target_band} bandLabel="RBA target 2–3%" breaks={range === "5y"} />
         )}
-        {S.unemployment_rate && S.underemployment_rate && (
-          <LineCard anchor="chart-jobs" title="Jobs" subtitle="Share of the labour force, seasonally adjusted"
-            takeaway={`${pct(last(S.unemployment_rate)[1])} can't find work, and ${pct(last(S.underemployment_rate)[1])} have work but want more hours.`}
-            lines={[{ s: S.unemployment_rate, name: "Unemployed", color: t.s1 }, { s: S.underemployment_rate, name: "Underemployed", color: t.s2 }]}
-            yFormat={(v) => pct(v)} />
-        )}
         {S.wpi_yoy && S.cpi_yoy_q && (
           <LineCard anchor="chart-wages" title="Wages vs prices" subtitle="Annual change, quarterly"
             takeaway={last(S.wpi_yoy)[1] < (valueAt(S.cpi_yoy_q, last(S.wpi_yoy)[0]) ?? 0)
@@ -87,27 +79,71 @@ export function GoingSection({ data }: { data: Data }) {
             lines={[{ s: S.wpi_yoy, name: "Wages", color: t.s1 }, { s: S.cpi_yoy_q, name: "Prices", color: t.s2 }]}
             yFormat={(v) => pct(v)} />
         )}
-        {S.gdp_growth_yoy && S.gdp_per_capita_growth_yoy && (
-          <LineCard anchor="chart-growth" title="Economic growth" subtitle="Annual change in real GDP, quarterly"
-            takeaway="When growth per person lags total growth, the economy is getting bigger mainly because there are more people."
-            lines={[{ s: S.gdp_growth_yoy, name: "Whole economy", color: t.s1 }, { s: S.gdp_per_capita_growth_yoy, name: "Per person", color: t.s2 }]}
-            yFormat={(v) => pct(v)} zeroLine />
+        {cpiB && (
+          <BarCard title="What's getting more expensive" subtitle="Annual price change by category"
+            takeaway={wage !== undefined
+              ? `${fasterThanWages.length} of ${cpiB.items.length} categories are rising faster than wages (${signed(wage, 1, "%")}), led by ${fasterThanWages.slice(0, 2).map((i) => lc(i.label)).join(" and ")}. Overall prices are up ${pct(cpi ?? 0)}.`
+              : undefined}
+            items={cpiB.items.map((i) => ({ label: i.label, value: i.value, color: wage !== undefined && i.value > wage ? t.s2 : t.axisMuted }))}
+            valueFormat={(v) => signed(v, 1, "%")}
+            legend={[{ label: `Rising faster than wages (${signed(wage ?? 0, 1, "%")})`, color: t.s2, kind: "rect" }, { label: "Rising slower than wages", color: t.axisMuted, kind: "rect" }]}
+            sources={[cpiB.source]} asOf={periodLabel(cpiB.as_of)}
+            table={{ head: ["Category", "Annual change"], rows: cpiB.items.map((i) => [i.label, signed(i.value, 1, "%")]), num: [1] }} />
         )}
-        {S.money_m1_growth && S.money_m3_growth && (
-          <LineCard anchor="chart-money-supply" title="Money supply" subtitle="Annual change in the amount of money in the economy, monthly"
-            takeaway={`There is ${pct(last(S.money_m3_growth)[1])} more money in the economy (M3) than a year ago. Money in everyday accounts (M1) is ${last(S.money_m1_growth)[1] < 0 ? "down" : "up"} ${pct(Math.abs(last(S.money_m1_growth)[1]))}.`}
-            lines={[{ s: S.money_m1_growth, name: "M1 (spending money)", color: t.s1 }, { s: S.money_m3_growth, name: "M3 (incl. savings)", color: t.s2 }]}
-            yFormat={(v) => pct(v)} zeroLine
-            glossary={{
-              title: "What do M1, M3 and broad money mean?",
-              terms: [
-                { term: "M1", text: "Notes and coins held by the public, plus money in everyday bank accounts. Money that is ready to spend." },
-                { term: "M3", text: "M1 plus savings accounts, term deposits and certificates of deposit issued by banks. Money people can get to fairly easily." },
-                { term: "Broad money", text: "M3 plus money lent to non-bank lenders by the public. It moves almost exactly with M3, so it isn't drawn." },
-                { term: "Why no M2?", text: "The RBA doesn't publish an M2. Australia's official measures are M1, M3 and broad money." },
-                { term: "Why it matters", text: "Most new money is created when banks lend. Money growing much faster than the economy can add to inflation; slow growth means conditions are tight." },
-              ],
-            }} />
+      </div>
+    </Chapter>
+  );
+}
+
+// ---------------------------------------------------------------- 2 Jobs and pay
+
+export function JobsSection({ data }: { data: Data }) {
+  const t = useTokens();
+  const { series: S, bundles: B } = data;
+  const jobs = B.job_vacancies_by_industry;
+  // Industries with 5,000+ vacancies, sorted by change; small ones swing too much to read.
+  const jobsBig = jobs ? jobs.items.filter((i) => i.value >= 5 && i.change_pct != null).sort((a, b) => b.change_pct! - a.change_pct!) : [];
+
+  return (
+    <Chapter id="jobs" verdict={jobsVerdict(data)}>
+      <div className="grid-2">
+        {S.unemployment_rate && S.underemployment_rate && (
+          <LineCard anchor="chart-jobs" title="Jobs" subtitle="Share of the labour force, seasonally adjusted"
+            takeaway={`${pct(last(S.unemployment_rate)[1])} can't find work, and ${pct(last(S.underemployment_rate)[1])} have work but want more hours.`}
+            lines={[{ s: S.unemployment_rate, name: "Unemployed", color: t.s1 }, { s: S.underemployment_rate, name: "Underemployed", color: t.s2 }]}
+            yFormat={(v) => pct(v)} />
+        )}
+        {jobs && (
+          <BarCard title="Where the jobs are" subtitle="Change in job vacancies over the year, industries with 5,000+ vacancies"
+            takeaway={jobsBig.length ? `Most growth in ${jobsBig.slice(0, 2).map((i) => lc(i.label)).join(" and ")}; the biggest drop in ${lc(jobsBig.at(-1)!.label)}. ${fmt(S.job_vacancies ? last(S.job_vacancies)[1] : jobs.items.reduce((a, i) => a + i.value, 0), 0)},000 job vacancies in total.` : undefined}
+            items={jobsBig.map((i) => ({ label: i.label, value: i.change_pct!, color: i.change_pct! >= 0 ? t.divPos : t.divNeg, extra: `${fmt(i.value, 1)}k vacancies` }))}
+            valueFormat={(v) => signed(v, 0, "%")}
+            legend={[{ label: "More vacancies than a year ago", color: t.divPos, kind: "rect" }, { label: "Fewer", color: t.divNeg, kind: "rect" }]}
+            sources={[jobs.source]} asOf={surveyMonth(jobs.as_of)}
+            table={{ head: ["Industry", "Vacancies ('000)", "Change on a year ago"], rows: jobs.items.map((i) => [i.label, fmt(i.value, 1), signed(i.change_pct ?? 0, 1, "%")]), num: [1, 2] }} />
+        )}
+      </div>
+    </Chapter>
+  );
+}
+
+// ---------------------------------------------------------------- 3 Interest rates and loans
+
+export function RatesSection({ data, tiles }: Props) {
+  const t = useTokens();
+  const S = data.series;
+  return (
+    <Chapter id="rates" verdict={ratesVerdict(data)} tiles={pick(tiles, "mortgage_rate", "aud")}>
+      <div className="grid-2">
+        {S.mortgage_rate_variable && S.mortgage_rate_discounted && S.cash_rate && (
+          <LineCard anchor="chart-borrowing" title="Borrowing costs" subtitle="Per cent per year"
+            takeaway={`A typical new variable mortgage costs ${pct(last(S.mortgage_rate_discounted)[1], 2)}; the banks' advertised standard rate is ${pct(last(S.mortgage_rate_variable)[1], 2)}. Both move with the RBA cash rate.`}
+            lines={[
+              { s: S.mortgage_rate_variable, name: "Standard variable mortgage", color: t.s1 },
+              { s: S.cash_rate, name: "RBA cash rate", color: t.s2, step: true, points: withToday(S.cash_rate).points },
+              { s: S.mortgage_rate_discounted, name: "Discounted variable", color: t.s3 },
+            ]}
+            yFormat={(v) => pct(v, v % 1 === 0 ? 0 : 1)} />
         )}
         {S.credit_housing_growth && S.credit_business_growth && S.credit_personal_growth && (
           <LineCard anchor="chart-credit" title="How fast borrowing is growing" subtitle="Annual change in what's owed to lenders, monthly"
@@ -128,14 +164,30 @@ export function GoingSection({ data }: { data: Data }) {
               ],
             }} />
         )}
+        {S.money_m1_growth && S.money_m3_growth && (
+          <LineCard anchor="chart-money-supply" title="Money supply" subtitle="Annual change in the amount of money in the economy, monthly"
+            takeaway={`There is ${pct(last(S.money_m3_growth)[1])} more money in the economy (M3) than a year ago. Money in everyday accounts (M1) is ${last(S.money_m1_growth)[1] < 0 ? "down" : "up"} ${pct(Math.abs(last(S.money_m1_growth)[1]))}.`}
+            lines={[{ s: S.money_m1_growth, name: "M1 (spending money)", color: t.s1 }, { s: S.money_m3_growth, name: "M3 (incl. savings)", color: t.s2 }]}
+            yFormat={(v) => pct(v)} zeroLine
+            glossary={{
+              title: "What do M1, M3 and broad money mean?",
+              terms: [
+                { term: "M1", text: "Notes and coins held by the public, plus money in everyday bank accounts. Money that is ready to spend." },
+                { term: "M3", text: "M1 plus savings accounts, term deposits and certificates of deposit issued by banks. Money people can get to fairly easily." },
+                { term: "Broad money", text: "M3 plus money lent to non-bank lenders by the public. It moves almost exactly with M3, so it isn't drawn." },
+                { term: "Why no M2?", text: "The RBA doesn't publish an M2. Australia's official measures are M1, M3 and broad money." },
+                { term: "Why it matters", text: "Most new money is created when banks lend. Money growing much faster than the economy can add to inflation; slow growth means conditions are tight." },
+              ],
+            }} />
+        )}
       </div>
-    </Section>
+    </Chapter>
   );
 }
 
-// ---------------------------------------------------------------- 2
+// ---------------------------------------------------------------- 5 The economy
 
-export function EarnSection({ data }: { data: Data }) {
+export function EconomySection({ data, tiles }: Props) {
   const t = useTokens();
   const { series: S, bundles: B } = data;
   const com = B.exports_by_commodity;
@@ -144,6 +196,7 @@ export function EarnSection({ data }: { data: Data }) {
   const tb = S.trade_balance_12m;
   const edu = S.exports_education_4q;
   const top4 = com ? com.items.slice(0, 4).reduce((a, i) => a + (i.share ?? 0), 0) : 0;
+  const indItems = ind ? topWithOther(ind, 10, "All other industries") : [];
 
   const exportItems = (b: Bundle, n: number): BarItem[] =>
     b.items.slice(0, n).map((i) => ({
@@ -157,9 +210,29 @@ export function EarnSection({ data }: { data: Data }) {
   });
 
   return (
-    <Section id="earn" title="How does Australia make money?"
-      lede="What the economy produces, and what the rest of the world buys from us.">
-      <div className="grid-3" style={{ marginBottom: 16 }}>
+    <Chapter id="economy" verdict={economyVerdict(data)} tiles={pick(tiles, "growth_per_person", "population")}>
+      <div className="grid-2">
+        {S.gdp_growth_yoy && S.gdp_per_capita_growth_yoy && (
+          <LineCard anchor="chart-growth" title="Economic growth" subtitle="Annual change in real GDP, quarterly"
+            takeaway="When growth per person lags total growth, the economy is getting bigger mainly because there are more people."
+            lines={[{ s: S.gdp_growth_yoy, name: "Whole economy", color: t.s1 }, { s: S.gdp_per_capita_growth_yoy, name: "Per person", color: t.s2 }]}
+            yFormat={(v) => pct(v)} zeroLine />
+        )}
+        {ind && (
+          <BarCard title="What the economy produces" subtitle="Output by industry, share of the total over the past year"
+            takeaway={`${ind.items[0].label} is the largest single industry at ${fmt(ind.items[0].share ?? 0)}% of output, but services together make up most of the economy.`}
+            items={indItems.map((i) => ({
+              label: i.label, value: i.share ?? 0, color: i.key === "other" ? t.axisMuted : t.s1, extra: `$${fmt(i.value, 0)}bn`,
+              expand: i.key === "other"
+                ? { title: i.label, rows: ind.items.slice(10).map((r) => ({ label: r.label, value: `${pct(r.share ?? 0)} · $${fmt(r.value, 0)}bn` })) }
+                : undefined,
+            }))}
+            valueFormat={(v) => pct(v)}
+            sources={[ind.source]} asOf={`year to ${periodLabel(ind.as_of, "Q")}`}
+            table={{ head: ["Industry", "Share", "$bn"], rows: ind.items.map((i) => [i.label, pct(i.share ?? 0), fmt(i.value, 0)]), num: [1, 2] }} />
+        )}
+      </div>
+      <div className="grid-3" style={{ margin: "16px 0" }}>
         {com && <Mini label="Goods exports, past 12 months" value={billions(com.total ?? 0, 0)} note={`12 months to ${periodLabel(com.as_of)}`} />}
         {tb && <Mini label="Goods trade surplus, past 12 months" value={billions(last(tb)[1])}
           note={`${billions(tb.points.find(([d]) => d >= `${Number(last(tb)[0].slice(0, 4)) - 1}${last(tb)[0].slice(4)}`)?.[1] ?? 0)} a year earlier`} />}
@@ -180,25 +253,17 @@ export function EarnSection({ data }: { data: Data }) {
             items={exportItems(cty, 10)} valueFormat={(v) => `$${fmt(v, v < 10 ? 1 : 0)}bn`}
             sources={[cty.source]} asOf={`12 months to ${periodLabel(cty.as_of)}`} table={exportTable(cty, 12)} />
         )}
-        {ind && (
-          <BarCard title="What the economy produces" subtitle="Output by industry, share of the total over the past year"
-            takeaway={`${ind.items[0].label} is the largest single industry at ${fmt(ind.items[0].share ?? 0)}% of output, but services together make up most of the economy.`}
-            items={topWithOther(ind, 10, "All other industries").map((i) => ({ label: i.label, value: i.share ?? 0, color: i.key === "other" ? t.axisMuted : t.s1, extra: `$${fmt(i.value, 0)}bn` }))}
-            valueFormat={(v) => pct(v)}
-            sources={[ind.source]} asOf={`year to ${periodLabel(ind.as_of, "Q")}`}
-            table={{ head: ["Industry", "Share", "$bn"], rows: ind.items.map((i) => [i.label, pct(i.share ?? 0), fmt(i.value, 0)]), num: [1, 2] }} />
-        )}
         {S.terms_of_trade && (
           <LineCard title="Terms of trade" subtitle="Export prices relative to import prices (index)"
             takeaway="When this is high, the world pays more for what Australia sells, which boosts incomes and tax revenue."
             lines={[{ s: S.terms_of_trade, name: "Terms of trade", color: t.s1 }]} yFormat={(v) => fmt(v, 0)} />
         )}
       </div>
-    </Section>
+    </Chapter>
   );
 }
 
-// ---------------------------------------------------------------- 3
+// ---------------------------------------------------------------- 6 Government money
 
 export function BudgetSection({ data }: { data: Data }) {
   const t = useTokens();
@@ -207,25 +272,34 @@ export function BudgetSection({ data }: { data: Data }) {
   const exp = B.spending_by_function;
   const bal = S.budget_balance_pct_gdp;
   const debt = S.net_debt_pct_gdp;
+  const spendItems = exp ? topWithOther(exp, 8, "Everything else") : [];
   return (
-    <Section id="budget" title="How does the government make and spend money?"
-      lede={`The federal budget${rev ? ` for ${rev.as_of}` : ""}: where the money comes from, where it goes, and whether it adds up.`}>
+    <Chapter id="budget" verdict={budgetVerdict(data)}>
       <div className="grid-2">
         {rev && (
           <BarCard title="Where the money comes from" subtitle={`Federal receipts by source, $bn (${rev.as_of} estimate, total ${billions(rev.total ?? 0, 0)})`}
             takeaway={`Nearly half (${fmt(rev.items[0].share ?? 0, 0)}%) comes from income tax paid by individuals. Companies pay ${fmt(rev.items[1].share ?? 0, 0)}%.`}
-            items={[...rev.items].sort((a, b) => b.value - a.value).map((i) => ({ label: i.label, value: i.value, color: t.s1, extra: `${pct(i.share ?? 0)} of receipts`, details: i.parts?.map((p) => `${p.label}: ${p.value < 0 ? "−" : ""}$${fmt(Math.abs(p.value))}bn`) }))}
+            items={[...rev.items].sort((a, b) => b.value - a.value).map((i) => ({
+              label: i.label, value: i.value, color: t.s1, extra: `${pct(i.share ?? 0)} of receipts`,
+              details: i.parts?.map((p) => `${p.label}: ${bn(p.value)}`),
+              expand: i.parts ? { title: i.label, rows: [...i.parts].sort((a, b) => b.value - a.value).map((p) => ({ label: p.label, value: bn(p.value) })) } : undefined,
+            }))}
             valueFormat={(v) => `$${fmt(v, 0)}bn`} sources={[rev.source]}
             table={{ head: ["Source", "$bn", "Share"], rows: rev.items.flatMap((i) => [[i.label, fmt(i.value), pct(i.share ?? 0)], ...(i.parts ?? []).map((p) => [`  · ${p.label}`, fmt(p.value), ""])]), num: [1, 2] }} />
         )}
         {exp && (
           <BarCard title="Where the money goes" subtitle={`Federal spending by purpose, $bn (${exp.as_of} estimate, total ${billions(exp.total ?? 0, 0)})`}
             takeaway={`Welfare is the biggest item at ${fmt(exp.items[0].share ?? 0, 0)}%. "Other purposes" is mostly GST passed to the states and interest on debt.`}
-            items={topWithOther(exp, 8, "Everything else").map((i) => ({
+            items={spendItems.map((i) => ({
               label: i.label, value: i.value, color: i.key === "other" ? t.axisMuted : t.s1, extra: `${pct(i.share ?? 0)} of spending`,
               details: i.key === "other"
                 ? exp.items.slice(8).map((r) => `${r.label}: $${fmt(r.value)}bn`)
-                : "description" in i && i.description ? [`Includes ${i.description}`] : undefined,
+                : i.description ? [`Includes ${i.description}`] : undefined,
+              expand: i.key === "other"
+                ? { title: i.label, rows: exp.items.slice(8).map((r) => ({ label: r.label, value: bn(r.value) })) }
+                : i.contains
+                  ? { title: i.label, rows: i.contains.map((c) => ({ label: c })), note: `The Budget's data files don't give amounts for these. Together they come to ${bn(i.value)}.` }
+                  : undefined,
             }))}
             valueFormat={(v) => `$${fmt(v, 0)}bn`} sources={[exp.source]}
             table={{ head: ["Purpose", "$bn", "Share"], rows: exp.items.map((i) => [i.label, fmt(i.value), pct(i.share ?? 0)]), num: [1, 2] }} />
@@ -241,59 +315,6 @@ export function BudgetSection({ data }: { data: Data }) {
             lines={[{ s: debt, name: "Net debt", color: t.s1 }]} yFormat={(v) => `${fmt(v, 0)}%`} zeroLine />
         )}
       </div>
-    </Section>
-  );
-}
-
-// ---------------------------------------------------------------- 4
-
-export function YouSection({ data }: { data: Data }) {
-  const t = useTokens();
-  const { series: S, bundles: B } = data;
-  const cpiB = B.cpi_breakdown;
-  const wage = S.wpi_yoy ? last(S.wpi_yoy)[1] : undefined;
-  const cpi = S.cpi_yoy ? last(S.cpi_yoy)[1] : undefined;
-  const jobs = B.job_vacancies_by_industry;
-
-  const fasterThanWages = cpiB && wage !== undefined ? cpiB.items.filter((i) => i.value > wage) : [];
-  // Industries with 5,000+ vacancies, sorted by change; small ones swing too much to read.
-  const jobsBig = jobs ? jobs.items.filter((i) => i.value >= 5 && i.change_pct != null).sort((a, b) => b.change_pct! - a.change_pct!) : [];
-
-  return (
-    <Section id="you" title="What does it mean for me?"
-      lede="Cost of living, borrowing and jobs. This describes the data; it isn't financial advice.">
-      <div className="grid-2">
-        {cpiB && (
-          <BarCard title="What's getting more expensive" subtitle="Annual price change by category"
-            takeaway={wage !== undefined
-              ? `${fasterThanWages.length} of ${cpiB.items.length} categories are rising faster than wages (${signed(wage, 1, "%")}), led by ${fasterThanWages.slice(0, 2).map((i) => lc(i.label)).join(" and ")}. Overall prices are up ${pct(cpi ?? 0)}.`
-              : undefined}
-            items={cpiB.items.map((i) => ({ label: i.label, value: i.value, color: wage !== undefined && i.value > wage ? t.s2 : t.axisMuted }))}
-            valueFormat={(v) => signed(v, 1, "%")}
-            legend={[{ label: `Rising faster than wages (${signed(wage ?? 0, 1, "%")})`, color: t.s2, kind: "rect" }, { label: "Rising slower than wages", color: t.axisMuted, kind: "rect" }]}
-            sources={[cpiB.source]} asOf={periodLabel(cpiB.as_of)}
-            table={{ head: ["Category", "Annual change"], rows: cpiB.items.map((i) => [i.label, signed(i.value, 1, "%")]), num: [1] }} />
-        )}
-        {S.mortgage_rate_variable && S.mortgage_rate_discounted && S.cash_rate && (
-          <LineCard anchor="chart-borrowing" title="Borrowing costs" subtitle="Per cent per year"
-            takeaway={`A typical new variable mortgage costs ${pct(last(S.mortgage_rate_discounted)[1], 2)}; the banks' advertised standard rate is ${pct(last(S.mortgage_rate_variable)[1], 2)}. Both move with the RBA cash rate.`}
-            lines={[
-              { s: S.mortgage_rate_variable, name: "Standard variable mortgage", color: t.s1 },
-              { s: S.cash_rate, name: "RBA cash rate", color: t.s2, step: true, points: withToday(S.cash_rate).points },
-              { s: S.mortgage_rate_discounted, name: "Discounted variable", color: t.s3 },
-            ]}
-            yFormat={(v) => pct(v, v % 1 === 0 ? 0 : 1)} />
-        )}
-        {jobs && (
-          <BarCard title="Where the jobs are" subtitle="Change in job vacancies over the year, industries with 5,000+ vacancies"
-            takeaway={jobsBig.length ? `Most growth in ${jobsBig.slice(0, 2).map((i) => lc(i.label)).join(" and ")}; the biggest drop in ${lc(jobsBig.at(-1)!.label)}. ${fmt(S.job_vacancies ? last(S.job_vacancies)[1] : jobs.items.reduce((a, i) => a + i.value, 0), 0)},000 job vacancies in total.` : undefined}
-            items={jobsBig.map((i) => ({ label: i.label, value: i.change_pct!, color: i.change_pct! >= 0 ? t.divPos : t.divNeg, extra: `${fmt(i.value, 1)}k vacancies` }))}
-            valueFormat={(v) => signed(v, 0, "%")}
-            legend={[{ label: "More vacancies than a year ago", color: t.divPos, kind: "rect" }, { label: "Fewer", color: t.divNeg, kind: "rect" }]}
-            sources={[jobs.source]} asOf={surveyMonth(jobs.as_of)}
-            table={{ head: ["Industry", "Vacancies ('000)", "Change on a year ago"], rows: jobs.items.map((i) => [i.label, fmt(i.value, 1), signed(i.change_pct ?? 0, 1, "%")]), num: [1, 2] }} />
-        )}
-      </div>
-    </Section>
+    </Chapter>
   );
 }
