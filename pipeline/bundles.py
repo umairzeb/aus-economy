@@ -118,6 +118,18 @@ def revenue_mix() -> dict:
     next(i for i in items if i["key"] == "excise")["parts"] = [dict(label=re.sub(r"\(\w\)$", "", k).replace("less: ", "Less: "),
                               value=round((-1 if k.startswith("less") else 1) * r[k] / 1000, 1))
                          for k in excise_rows if k in r]
+    # "Other taxes" is the leftover after the headline taxes: table 5.7 itemises it.
+    lowered = {k.lower().rstrip(): v for k, v in r.items()}
+    other_rows = [("Fringe benefits tax", "fringe benefits tax"), ("Petroleum resource rent tax", "petroleum resource rent tax"),
+                  ("Wine equalisation tax", "wine equalisation tax"), ("Luxury car tax", "luxury car tax"),
+                  ("Major bank levy", "major bank levy"), ("Agricultural levies", "agricultural levies"),
+                  ("Visa application charges", "visa application charges"), ("Other taxes", "other taxes")]
+    other_item = next(i for i in items if i["key"] == "other_tax")
+    other_parts = [dict(label=label, value=round(lowered[k] / 1000, 1)) for label, k in other_rows if k in lowered]
+    missing = other_tax - sum(lowered[k] for _, k in other_rows if k in lowered)  # in $m, before rounding
+    if abs(missing) >= 50:
+        other_parts.append(dict(label="Not itemised", value=round(missing / 1000, 1)))
+    other_item["parts"] = sorted(other_parts, key=lambda p: -p["value"])
     return dict(id="revenue_mix", title=f"Where the government's money comes from ({year} Budget estimate)",
                 unit="$bn", section="budget", as_of=year, total=round(total / 1000, 1), items=items,
                 source={"name": BUDGET, "dataset": f"Budget {year}, Table 5.7", "url": b["dataset_url"]})
@@ -133,9 +145,13 @@ def spending_by_function() -> dict:
     # Budget Paper 1 (Statement 6) names the sub-functions; the data files carry no split by amount.
     for i in items:
         if i["key"] == "other_purposes":
-            i["description"] = ("GST and other general payments to the states and territories, interest on "
-                                "government debt, interest on public-sector super, natural disaster relief, "
-                                "and the contingency reserve.")
+            i["contains"] = ["GST and other general payments to the states and territories",
+                             "Interest on government debt",
+                             "Interest on public-sector superannuation",
+                             "Natural disaster relief",
+                             "The contingency reserve"]
+            i["description"] = ", ".join(c[0].lower() + c[1:] if c[:2].islower() or not c[:2].isupper() else c for c in i["contains"][:-1]) + \
+                f" and {i['contains'][-1][0].lower() + i['contains'][-1][1:]}."
     return dict(id="spending_by_function", title=f"Where the government's money goes ({year} Budget estimate)",
                 unit="$bn", section="budget", as_of=year, total=round(total / 1000, 1), items=items,
                 source={"name": BUDGET, "dataset": f"Budget {year}, Table 6.3", "url": b["dataset_url"]},

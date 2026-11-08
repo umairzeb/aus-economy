@@ -2,7 +2,9 @@
 import { last, valueAt, type Data, type Series } from "./data";
 import { BarCard, GroupedCard, LineCard } from "./cards";
 import { billions, fmt, pct, periodLabel, signed } from "./format";
-import { Section, lc } from "./sections";
+import { Chapter } from "./chapter";
+import { lc } from "./sections";
+import { businessVerdict } from "./verdicts";
 import { useTokens } from "./theme";
 
 /** Value a year before the series' latest point. */
@@ -38,8 +40,7 @@ export function BusinessSection({ data }: { data: Data }) {
   const postingsAgo = postings && yearEarlier(postings);
 
   return (
-    <Section id="business" title="For business"
-      lede="What it costs to borrow, how small firms fare against big ones, how many companies are going under, and where hiring is heading.">
+    <Chapter id="business" verdict={businessVerdict(data)}>
       <div className="grid-2">
         {small && medium && large && (
           <LineCard anchor="chart-business-rates" title="What businesses pay to borrow" subtitle="Average interest rate on new business loans, per cent"
@@ -100,6 +101,6 @@ export function BusinessSection({ data }: { data: Data }) {
             table={{ head: ["Type of job", "Index (Feb 2020 = 100)", "Change on a year ago"], rows: ads.items.map((i) => [i.label, fmt(i.value, 0), signed(i.change_pct ?? 0, 1, "%")]), num: [1, 2] }} />
         )}
       </div>
-    </Section>
+    </Chapter>
   );
 }

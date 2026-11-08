@@ -334,6 +334,11 @@ def check_relations(series: dict, bundles: dict) -> None:
     excise = next(i for i in bundles["revenue_mix"]["items"] if i["key"] == "excise")
     total_parts = sum(p["value"] for p in excise["parts"])
     record(g, "excise products add up to the excise bar", close(total_parts, excise["value"], 0.3), f"{round(total_parts, 1)} vs {excise['value']}")
+    other_tax = next(i for i in bundles["revenue_mix"]["items"] if i["key"] == "other_tax")
+    total_parts = sum(p["value"] for p in other_tax["parts"])
+    record(g, "the other taxes add up to the other taxes bar", close(total_parts, other_tax["value"], 0.3), f"{round(total_parts, 1)} vs {other_tax['value']}")
+    other_purposes = next(i for i in bundles["spending_by_function"]["items"] if i["key"] == "other_purposes")
+    record(g, "'Other purposes' says what it contains", bool(other_purposes.get("contains")), "no list of contents")
     for bid in ("exports_by_commodity", "exports_by_country"):
         b = bundles[bid]
         s12 = sum(p[1] for p in series["exports_goods"]["points"][-12:]) / 1000

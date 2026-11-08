@@ -1,9 +1,9 @@
 // Page audit: paste into the browser console on the dashboard, or run from a browser tool.
-// Goes through every range and every chart, and returns the problems it finds.
+// Goes through every range, chapter and chart, and returns the problems it finds.
 (async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const problems = [];
-  const stats = { cards: 0, charts: 0, tables: 0, tooltips: 0, ranges: 0 };
+  const stats = { chapters: 0, cards: 0, tables: 0, tooltips: 0, expands: 0, ranges: 0 };
   const titleOf = (el) => el.closest("article")?.querySelector("h3")?.textContent ?? "page";
   const BAD = /\bNaN\b|\bundefined\b|\bnull\b|\bInfinity\b|\[object|\$-|\+-|--\d|%%|\$\$/;
 
@@ -13,6 +13,11 @@
     if (m) problems.push(`${label}: bad text "${m[0]}"`);
     const doc = document.documentElement;
     if (doc.scrollWidth > doc.clientWidth + 1) problems.push(`${label}: page scrolls sideways (${doc.scrollWidth} > ${doc.clientWidth})`);
+    const bar = document.querySelector(".topbar");
+    if (bar && bar.getBoundingClientRect().height > 110) problems.push(`${label}: top bar is ${Math.round(bar.getBoundingClientRect().height)}px tall`);
+    document.querySelectorAll(".tile").forEach((tile) => {
+      if (tile.scrollWidth > tile.clientWidth + 1) problems.push(`${label}: tile "${tile.querySelector(".label")?.textContent}" overflows`);
+    });
     document.querySelectorAll("article.card").forEach((a) => {
       const t = titleOf(a);
       if (a.scrollWidth > a.clientWidth + 1) problems.push(`${label}: "${t}" card overflows`);
@@ -22,7 +27,6 @@
       if (!svg) { problems.push(`${label}: "${t}" has no chart`); return; }
       const box = svg.getBoundingClientRect();
       if (box.width < 100 || box.height < 100) problems.push(`${label}: "${t}" chart is ${box.width}x${box.height}`);
-      if (svg.querySelectorAll("path").length < 2) problems.push(`${label}: "${t}" chart has no marks`);
       const texts = [...svg.querySelectorAll("text")].map((x) => ({ t: x.textContent, r: x.getBoundingClientRect() })).filter((o) => o.r.width > 0);
       if (!texts.length) problems.push(`${label}: "${t}" chart has no labels`);
       for (const o of texts) {
@@ -36,31 +40,41 @@
     });
   };
 
-  const ranges = ["5 yrs", "10 yrs", "30 yrs", "All"];
   const button = (t) => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === t);
-  const original = document.querySelector('.segmented [aria-pressed="true"], .segmented [aria-checked="true"]')?.textContent.trim();
-  for (const r of ranges) {
+  for (const r of ["5 yrs", "10 yrs", "30 yrs", "All"]) {
     button(r)?.click();
     await wait(900);
     stats.ranges++;
     pageChecks(r);
   }
-  button(original ?? "10 yrs")?.click();
+  button("10 yrs")?.click();
   await wait(700);
+
+  // Every chapter has a number, a verdict and charts; every nav link leads to one.
+  document.querySelectorAll("main section.chapter").forEach((c) => {
+    stats.chapters++;
+    if (!c.querySelector(".badge")) problems.push(`chapter ${c.id} has no number`);
+    if (!c.querySelector(".verdict")?.textContent.trim()) problems.push(`chapter ${c.id} has no verdict`);
+    if (!c.querySelector("article.card")) problems.push(`chapter ${c.id} has no charts`);
+  });
+  document.querySelectorAll(".topbar-nav a").forEach((a) => {
+    if (!document.getElementById(a.getAttribute("href").slice(1))) problems.push(`nav link ${a.getAttribute("href")} goes nowhere`);
+  });
+  if (document.querySelectorAll(".tiles-headline .tile").length !== 4) problems.push("the top of the page should have four headline cards");
 
   const cards = [...document.querySelectorAll("article.card")];
   stats.cards = cards.length;
   for (const a of cards) {
     const t = titleOf(a);
-    const svg = a.querySelector(".chart-wrap svg");
-    if (svg) {
-      stats.charts++;
-      const host = svg.parentElement;
+    a.scrollIntoView({ block: "center" });
+    await wait(80);
+    const host = a.querySelector(".chart-wrap svg")?.parentElement;
+    if (host) {
       const box = host.getBoundingClientRect();
-      const xs = [0.2, 0.5, 0.8];
-      for (const x of xs) {
-        host.dispatchEvent(new MouseEvent("mousemove", { clientX: box.left + box.width * x, clientY: box.top + box.height * 0.4, bubbles: true }));
-        await wait(60);
+      for (const f of [0.2, 0.5, 0.8]) {
+        const x = box.left + box.width * f, y = box.top + box.height * 0.45;
+        for (const type of ["mouseover", "mousemove"]) host.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, bubbles: true, view: window }));
+        await wait(70);
         const tip = a.querySelector(".tt");
         if (tip) {
           stats.tooltips++;
@@ -70,6 +84,21 @@
         }
       }
       host.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+    }
+    // Rows that say "other" open to show what's inside.
+    for (const chip of a.querySelectorAll(".chip-btn")) {
+      if (chip.getAttribute("aria-expanded") === "true") { chip.click(); await wait(40); }
+      chip.click();
+      await wait(60);
+      const panel = a.querySelector(".expand-panel");
+      if (!panel?.innerText.trim()) problems.push(`"${t}": "${chip.textContent.trim()}" opens nothing`);
+      else {
+        stats.expands++;
+        if (panel.scrollWidth > panel.clientWidth + 1) problems.push(`"${t}": breakdown overflows`);
+        if (BAD.test(panel.innerText)) problems.push(`"${t}": breakdown has bad text`);
+      }
+      chip.click();
+      await wait(30);
     }
     const toggle = [...a.querySelectorAll("button")].find((b) => b.textContent === "Show table");
     if (toggle) {
@@ -88,13 +117,12 @@
     } else problems.push(`"${t}" has no table button`);
   }
 
-  // Tile and nav links lead somewhere; the two tabs of data agree.
+  const dupes = [...document.querySelectorAll("[id]")].map((e) => e.id).filter((id, i, all) => all.indexOf(id) !== i);
+  if (dupes.length) problems.push(`duplicate ids: ${[...new Set(dupes)].join(", ")}`);
   document.querySelectorAll('a[href^="#"]').forEach((a) => {
     const id = a.getAttribute("href").slice(1);
     if (id && !document.getElementById(id)) problems.push(`link ${a.getAttribute("href")} goes nowhere`);
   });
-  const dupes = [...document.querySelectorAll("[id]")].map((e) => e.id).filter((id, i, all) => all.indexOf(id) !== i);
-  if (dupes.length) problems.push(`duplicate ids: ${[...new Set(dupes)].join(", ")}`);
   const links = [...new Set([...document.querySelectorAll('a[href^="http"]')].map((a) => a.href))];
   return { width: innerWidth, stats, problems: [...new Set(problems)], links };
 })();

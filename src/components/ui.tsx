@@ -44,6 +44,8 @@ export function Sparkline({ points, width = 88, height = 34 }: { points: Point[]
 }
 
 export interface TileProps {
+  /** Lets a chapter pick this tile. */
+  id?: string;
   label: string;
   value: string;
   delta?: { text: string; tone: "good" | "bad" | "neutral"; vs: string };

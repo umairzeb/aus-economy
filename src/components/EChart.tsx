@@ -13,16 +13,24 @@ interface Props {
   option: (width: number) => EChartsOption;
   height: number;
   label: string;
+  /** Called with a category name when its label or bar is clicked (bar charts). */
+  onItemClick?: (name: string) => void;
 }
 
-export function EChart({ option, height, label }: Props) {
+export function EChart({ option, height, label, onItemClick }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
   const [width, setWidth] = useState(0);
+  const clickRef = useRef(onItemClick);
+  clickRef.current = onItemClick;
 
   useEffect(() => {
     const el = ref.current!;
     chart.current = echarts.init(el, undefined, { renderer: "svg" });
+    chart.current.on("click", (p) => {
+      const name = p.componentType === "yAxis" ? p.value : p.name;
+      if (typeof name === "string") clickRef.current?.(name);
+    });
     const ro = new ResizeObserver(() => {
       setWidth(el.clientWidth);
       chart.current?.resize();

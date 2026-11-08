@@ -1,5 +1,5 @@
 // Reusable chart cards: line cards for time series, bar cards for bundles.
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { since, type Point, type Series, type Source } from "./data";
 import { yearChange } from "./change";
 import { barListHeight, barOption, columnOption, groupedBarOption, groupedHeight, lineOption, type BarItem, type RefLine } from "./charts";
@@ -127,13 +127,40 @@ interface BarCardProps {
 
 export function BarCard(p: BarCardProps) {
   const t = useTokens();
+  const [open, setOpen] = useState<string | null>(null);
   const option = useCallback(
     (width: number) => barOption({ items: p.items, t, width, valueFormat: p.valueFormat, refLines: p.refLines }),
     [t, p.items],
   );
+  const expandable = p.items.filter((i) => i.expand);
+  const shown = expandable.find((i) => i.label === open);
+  const toggle = (name: string) => setOpen((o) => (o === name ? null : name));
   return (
     <ChartCard anchor={p.anchor} title={p.title} subtitle={p.subtitle} takeaway={p.takeaway} note={p.note} legend={p.legend} sources={p.sources} asOf={p.asOf} table={p.table}>
-      <EChart option={option} height={barListHeight(p.items.length, p.refLines?.length ?? 0)} label={`${p.title}. Bar chart; use Show table for values.`} />
+      <EChart option={option} height={barListHeight(p.items.length, p.refLines?.length ?? 0)} label={`${p.title}. Bar chart; use Show table for values.`}
+        onItemClick={(name) => expandable.some((i) => i.label === name) && toggle(name)} />
+      {expandable.length > 0 && (
+        <div className="expand">
+          <div className="expand-chips">
+            <span>What's inside:</span>
+            {expandable.map((i) => (
+              <button key={i.label} type="button" className="chip-btn" aria-expanded={open === i.label} onClick={() => toggle(i.label)}>
+                {i.label} <span aria-hidden="true">{open === i.label ? "▴" : "▾"}</span>
+              </button>
+            ))}
+          </div>
+          {shown?.expand && (
+            <div className="expand-panel" role="region" aria-label={`What's inside ${shown.expand.title}`}>
+              <ul>
+                {shown.expand.rows.map((r) => (
+                  <li key={r.label}><span>{r.label}</span>{r.value && <span className="num">{r.value}</span>}</li>
+                ))}
+              </ul>
+              {shown.expand.note && <p>{shown.expand.note}</p>}
+            </div>
+          )}
+        </div>
+      )}
     </ChartCard>
   );
 }
