@@ -159,6 +159,7 @@ def main() -> int:
                     bundles.revenue_mix, bundles.spending_by_function, bundles.job_vacancies_by_industry,
                     business.business_counts_by_size, business.job_postings_by_category,
                     lambda: bundles.cpi_breakdown(lambda sid: built.get(sid, {}).get("points")),
+                    bundles.grocery_prices,
                     bundles.states):
         try:
             res = builder()

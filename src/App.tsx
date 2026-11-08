@@ -23,7 +23,7 @@ const SERIES = [
 ];
 const BUNDLES = [
   "exports_by_commodity", "exports_by_country", "gdp_by_industry", "revenue_mix", "spending_by_function",
-  "cpi_breakdown", "dwelling_price_by_state", "job_vacancies_by_industry", "business_counts_by_size",
+  "cpi_breakdown", "grocery_prices", "dwelling_price_by_state", "job_vacancies_by_industry", "business_counts_by_size",
   "job_postings_by_category",
 ];
 

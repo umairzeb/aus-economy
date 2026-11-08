@@ -18,6 +18,7 @@ Findings from the step 1 data check (26 Oct 2026). Every source below is free, n
 - `UNIT_MULT` is not always right: some national accounts flows report $m values with multiplier 0. The `SANITY` ranges in `pipeline/build.py` catch magnitude mistakes.
 - **CPI changed in late 2025.** The ABS replaced the quarterly CPI and the Monthly CPI Indicator with a complete monthly CPI (dataflow `CPI`, v2.0.0). Its annual-change series only starts Apr 2025.
   - `cpi_yoy` / `trimmed_mean_yoy` splice the old indicator (`CPI_M`, from Sep 2018) onto the new CPI. Trimmed mean steps up ~0.5pp at the join because the two measures differ. The series carries a `breaks` marker so charts can annotate it.
+  - `grocery_prices` shows the CPI's grocery categories, latest month. Fruit and vegetables are shown separately, not with their combined group, and meals out and takeaway are left out, though the CPI's food group includes them. These are rates of change, not shelf prices.
   - Long history uses the quarterly index (back to 1948) and `CPI_Q` trimmed mean (from 1983).
 - Housing lending: owner-occupier and investor loans use loan purpose `TOTDWELL`; first home buyer loans use `TOTHOUS`. Other combinations return nothing.
 - Building approvals in `BA_GCCSA` are original (unadjusted) only, so the dashboard uses rolling 12-month totals.
