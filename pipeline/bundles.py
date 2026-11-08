@@ -10,7 +10,7 @@ from datetime import date
 import pandas as pd
 
 from .derived import BUDGET, abs_src
-from .registry import CPI_COMPONENTS, STATES
+from .registry import CPI_COMPONENTS, GROCERY_CATEGORIES, STATES
 from .sources import abs as abs_
 from .sources import budget
 
@@ -169,6 +169,21 @@ def cpi_breakdown(got) -> dict:
                 as_of=max(i["as_of"] for i in items), items=items,
                 source=abs_src("CPI"),
                 notes="Annual price change by category, latest month. Compare with headline CPI.")
+
+
+def grocery_prices() -> dict:
+    """Annual price change for each grocery category, latest month."""
+    codes = "+".join(c for c, _ in GROCERY_CATEGORIES.values())
+    df = abs_.fetch("CPI", f"3.{codes}.10.50.M").dropna(subset=["OBS_VALUE"]).sort_values("date")
+    items = []
+    for slug, (code, label) in GROCERY_CATEGORIES.items():
+        g = df[df["INDEX"] == code]
+        if not g.empty:
+            items.append(dict(key=slug, label=label, value=float(g["OBS_VALUE"].iloc[-1]), as_of=g["date"].iloc[-1]))
+    items.sort(key=lambda x: -x["value"])
+    return dict(id="grocery_prices", title="Groceries", unit="% y/y", section="prices",
+                as_of=max(i["as_of"] for i in items), items=items, source=abs_src("CPI"),
+                notes="Annual price change by grocery category, latest month. Excludes meals out and takeaway.")
 
 
 def _by_state(flow: str, key: str, bid: str, title: str, unit: str, section: str, change_lag: int,

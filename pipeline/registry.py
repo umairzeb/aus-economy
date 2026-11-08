@@ -197,6 +197,19 @@ SERIES = [
 ]
 
 # CPI components: monthly, original, annual % change (CPI MEASURE 3).
+# The food a household buys to eat at home. Meals out and takeaway are in the CPI's food group but aren't groceries.
+GROCERY_CATEGORIES = {
+    "fruit": ("114121", "Fruit"),
+    "vegetables": ("114122", "Vegetables"),
+    "meat_seafood": ("30003", "Meat & seafood"),
+    "dairy": ("30001", "Dairy"),
+    "bread_cereals": ("30002", "Bread & cereals"),
+    "eggs": ("40027", "Eggs"),
+    "snacks": ("115501", "Snacks & confectionery"),
+    "condiments": ("97549", "Condiments & additives"),
+    "drinks": ("131180", "Non-alcoholic drinks"),
+}
+
 CPI_COMPONENTS = {
     "food": ("20001", "Food & non-alcoholic drinks"),
     "housing": ("20003", "Housing"),

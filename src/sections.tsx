@@ -56,6 +56,11 @@ export function CostSection({ data, tiles }: Props) {
   const wage = S.wpi_yoy ? last(S.wpi_yoy)[1] : undefined;
   const cpi = S.cpi_yoy ? last(S.cpi_yoy)[1] : undefined;
   const fasterThanWages = cpiB && wage !== undefined ? cpiB.items.filter((i) => i.value > wage) : [];
+  const groceries = B.grocery_prices;
+  const groceriesAboveWages = groceries && wage !== undefined ? groceries.items.filter((i) => i.value > wage).length : 0;
+  const allFood = cpiB?.items.find((i) => i.key === "food");
+  const mealsOut = cpiB?.items.find((i) => i.key === "meals_out");
+  const move = (v: number) => `${v < 0 ? "down" : "up"} ${pct(Math.abs(v))}`;
 
   return (
     <Chapter id="cost" verdict={costVerdict(data)} tiles={pick(tiles, "real_wages")}>
@@ -89,6 +94,16 @@ export function CostSection({ data, tiles }: Props) {
             legend={[{ label: `Rising faster than wages (${signed(wage ?? 0, 1, "%")})`, color: t.s2, kind: "rect" }, { label: "Rising slower than wages", color: t.axisMuted, kind: "rect" }]}
             sources={[cpiB.source]} asOf={periodLabel(cpiB.as_of)}
             table={{ head: ["Category", "Annual change"], rows: cpiB.items.map((i) => [i.label, signed(i.value, 1, "%")]), num: [1] }} />
+        )}
+        {groceries && (
+          <BarCard anchor="chart-groceries" title="Groceries" subtitle="Annual price change by grocery category"
+            takeaway={`${groceries.items[0].label} is ${move(groceries.items[0].value)} on a year ago, the biggest rise. ${groceries.items.at(-1)!.label} ${groceries.items.at(-1)!.label.endsWith("s") ? "are" : "is"} ${move(groceries.items.at(-1)!.value)}.${wage !== undefined ? ` ${groceriesAboveWages} of ${groceries.items.length} categories are rising faster than wages.` : ""}`}
+            note={allFood && mealsOut ? `The overall food figure of ${signed(allFood.value, 1, "%")} also includes meals out and takeaway (${signed(mealsOut.value, 1, "%")}), which aren't groceries.` : undefined}
+            items={groceries.items.map((i) => ({ label: i.label, value: i.value, color: wage !== undefined && i.value > wage ? t.s2 : t.axisMuted }))}
+            valueFormat={(v) => signed(v, 1, "%")}
+            legend={[{ label: `Rising faster than wages (${signed(wage ?? 0, 1, "%")})`, color: t.s2, kind: "rect" }, { label: "Rising slower than wages", color: t.axisMuted, kind: "rect" }]}
+            sources={[groceries.source]} asOf={periodLabel(groceries.as_of)}
+            table={{ head: ["Category", "Annual change"], rows: groceries.items.map((i) => [i.label, signed(i.value, 1, "%")]), num: [1] }} />
         )}
       </div>
     </Chapter>

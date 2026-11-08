@@ -46,7 +46,7 @@ FRESHNESS = {
     "job_postings_indeed": (7, 10), "population": (92, 175), "nom_": (92, 175), "natural_increase": (92, 175),
 }
 BUNDLE_FRESHNESS = {
-    "cpi_breakdown": (31, 32), "dwelling_price_by_state": (92, 100), "exports_by_commodity": (31, 45),
+    "cpi_breakdown": (31, 32), "grocery_prices": (31, 32), "dwelling_price_by_state": (92, 100), "exports_by_commodity": (31, 45),
     "exports_by_country": (31, 45), "gdp_by_industry": (92, 70), "job_postings_by_category": (7, 12),
     "job_vacancies_by_industry": (92, 40), "population_by_state": (92, 175), "unemployment_by_state": (31, 25),
 }
@@ -334,6 +334,11 @@ def check_relations(series: dict, bundles: dict) -> None:
     excise = next(i for i in bundles["revenue_mix"]["items"] if i["key"] == "excise")
     total_parts = sum(p["value"] for p in excise["parts"])
     record(g, "excise products add up to the excise bar", close(total_parts, excise["value"], 0.3), f"{round(total_parts, 1)} vs {excise['value']}")
+    groceries = bundles["grocery_prices"]
+    record(g, "groceries are as recent as the other price categories", groceries["as_of"] == bundles["cpi_breakdown"]["as_of"],
+           f"{groceries['as_of']} vs {bundles['cpi_breakdown']['as_of']}")
+    record(g, "every grocery category has a sensible yearly change", all(-40 <= i["value"] <= 60 for i in groceries["items"]) and len(groceries["items"]) == 9,
+           str([(i["label"], i["value"]) for i in groceries["items"]]))
     other_tax = next(i for i in bundles["revenue_mix"]["items"] if i["key"] == "other_tax")
     total_parts = sum(p["value"] for p in other_tax["parts"])
     record(g, "the other taxes add up to the other taxes bar", close(total_parts, other_tax["value"], 0.3), f"{round(total_parts, 1)} vs {other_tax['value']}")
